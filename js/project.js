@@ -55,7 +55,7 @@
     rigs: {},                               // per set-up: [{ h, nx, ny, pins }] lens height (mm), lens offset from Lady Erin (mm, +east/+north), pins (screen 0–1)
     base: 9, datum: -3, vex: 1,             // how the tiles were printed: base slab (mm), datum (m OD) and ground exaggeration
     cal: false, test: false, follow: true, bright: 1,
-    layers: { roads: true, water: true, areas: false, zoning: false, mon: false, scheme: false, relief: false, grid: false, opw: false, buses: false, traffic: false },
+    layers: { roads: true, water: true, areas: false, zoning: false, mon: false, scheme: false, relief: false, grid: false, opw: false, buses: false, traffic: false, sewer: false, watermains: false },
     kiosk: null                             // last state from the kiosk
   };
   let edit = 0;                             // the projector the control page is calibrating
@@ -85,6 +85,7 @@
   const OPW = (await getJSON('data/opw_flood.json')).features.map(f => ({ g: itm(f.geometry), p: { src: 'opw', level: f.properties.aep } }));
   OPW.forEach(o => F.push(o));
   const BUS = await AW.buses();
+  const UT = await AW.utilities();
   const TT = AW.traffic; getJSON('exhibition/config.json').then(c => TT.setConfigKey(c.tomtomKey)).catch(() => { });
   const CIRC = MJ.circle.coordinates[0], TBOX = [Math.min(...CIRC.map(c => c[0])), Math.min(...CIRC.map(c => c[1])), Math.max(...CIRC.map(c => c[0])), Math.max(...CIRC.map(c => c[1]))];
   let TR = null, trB = -1, trBusy = false;
@@ -133,6 +134,11 @@
         else ks.sel.ids.forEach(i => { const a = A[i]; if (!a) return; fill(a.g, Q.C.match, .45); tx.strokeStyle = Q.C.match; tx.lineWidth = 5; tx.beginPath(); path(a.g); tx.stroke(); });
       }
       if (L.buses) { tx.lineCap = 'round'; tx.lineJoin = 'round'; tx.lineWidth = 7 * k; tx.globalAlpha = .9; BUS.lines.forEach(l => { tx.strokeStyle = BUS.routes[l.r].col; tx.beginPath(); l.x.forEach((x, i) => { const [a, b] = P(x, l.y[i]); i ? tx.lineTo(a, b) : tx.moveTo(a, b); }); tx.stroke(); }); tx.globalAlpha = 1; }
+      Object.values(UT).forEach(u => {                                 // underground networks: pipes 3 m wide (1.2 mm), outfalls as rings
+        if (!L[u.id]) return; tx.strokeStyle = u.col; tx.lineWidth = 3 * k; tx.lineCap = 'round'; tx.lineJoin = 'round';
+        tx.beginPath(); u.lines.forEach(l => l.xy.forEach(([E, N], i) => { const [a, b] = P(E, N); i ? tx.lineTo(a, b) : tx.moveTo(a, b); })); tx.stroke();
+        tx.lineWidth = 4 * k; u.points.outfall.forEach(([E, N]) => { const [a, b] = P(E, N); tx.beginPath(); tx.arc(a, b, 14 * k, 0, 7); tx.stroke(); });
+      });
       if (L.scheme) fill(SCH, Q.C.scheme);
       if (L.mon) { tx.fillStyle = '#62d39a'; MON.forEach(g => { const [x, y] = P(...g.coordinates); tx.beginPath(); tx.arc(x, y, 12 * k, 0, 7); tx.fill(); }); }
       if (L.grid || S.cal) { tx.strokeStyle = S.cal ? '#ff9a00' : '#f0a54a'; tx.lineWidth = 3; MJ.tiles.forEach(t => { const [x, y] = P(t.x0, t.y0 + 575); tx.strokeRect(x, y, 575 * k, 575 * k); }); }
@@ -206,7 +212,7 @@
       fragmentShader: 'varying float va; void main(){ gl_FragColor = vec4(0.0, 0.0, 0.0, va); }'
     }));
     mask.renderOrder = 1; scene.add(mask);
-    const oc = overlay.getContext('2d'); let wpx = 2, hpx = 2, fcur = null, pxm = 1, buses = [], typ = null, typScr = null;
+    const oc = overlay.getContext('2d'); let wpx = 2, hpx = 2, fcur = null, pxm = 1, buses = [], typ = null, typScr = null, flow = [];
     const live = () => which() < S.n;
     function rez() { for (let j = 0; j <= NM; j++) for (let i = 0; i <= NM; i++) zz[j * (NM + 1) + i] = zAt(X0 + i / NM * SZ, Y0 + j / NM * SZ); warp(); }
     function warp() {
@@ -243,6 +249,11 @@
         });
         oc.globalAlpha = 1;
       }
+      if (flow.length && fcur) {                                      // flow along the pipes: small bright dots moving downstream
+        const pi = which(), rad = Math.max(1.5, 3.5 * pxm); oc.globalAlpha = S.bright;
+        flow.forEach(([col, pts]) => { oc.fillStyle = col; oc.beginPath(); pts.forEach(([E, N]) => { if ((E - CX) ** 2 + (N - CY) ** 2 > R * R || weight(pi, E, N) < .5) return; const [x, y] = fcur(E, N, zAt(E, N)); oc.moveTo(x + rad, y); oc.arc(x, y, rad, 0, 7); }); oc.fill(); });
+        oc.globalAlpha = 1;
+      }
       if (buses.length && fcur) {                                     // town buses: a dot 8 mm across on the model (20 m)
         const pi = which(), rad = Math.max(3, 10 * pxm); oc.globalAlpha = S.bright;
         buses.forEach(b => {
@@ -270,7 +281,7 @@
     overlay.addEventListener('pointerup', () => { if (drag >= 0) { drag = -1; calChanged(true); } });
     const nudge = (dx, dy) => { if (!live()) return; const p = rig(which()).pins; p[sel] = [p[sel][0] + dx / wpx, p[sel][1] + dy / hpx]; calChanged(true); };
     new ResizeObserver(resize).observe(wrap);
-    const v = { warp, rez, draw, nudge, texUpdate() { t3.needsUpdate = true; draw(); }, setBuses(list) { buses = list; handles(); }, setTypical(list) { typ = list; handles(); } };
+    const v = { warp, rez, draw, nudge, texUpdate() { t3.needsUpdate = true; draw(); }, setBuses(list) { buses = list; handles(); }, setTypical(list) { typ = list; handles(); }, setFlow(list) { flow = list; } };
     views.push(v); return v;
   }
 
@@ -298,7 +309,8 @@
     const c = BUS.clock(!!(ks && ks.busFast)), tyOn = !!(L && L.traffic) && (!(TR && TR.ok) || c.fast) && !S.test;
     const rd = tyOn && c.fast ? (d => d && d.n === MAIN.length ? d : null)(RC.bestDay()) : null, st = tyOn ? TY.step(c) + (c.fast ? 'f' : '') + c.day + (rd ? rd.date : '') : null;
     if (st !== tyStep) { tyStep = st; const lv = rd ? RC.at(rd, c.t) : null; const list = tyOn ? MAIN.map((m, i) => lv && lv[i] >= 0 ? LV[lv[i]] : TY.level(m.c, m.d, c)) : null; views.forEach(v => v.setTypical(list)); }
-    if (!on) { if (hadBuses) { views.forEach(v => v.setBuses([])); hadBuses = false; } return; }
+    const fl = S.test ? [] : Object.values(UT).filter(u => L && L[u.id]).map(u => [u.dot, AW.flowDots(u)]); views.forEach(v => v.setFlow(fl));
+    if (!on) { if (hadBuses) { views.forEach(v => v.setBuses([])); hadBuses = false; } views.forEach(v => v.draw && fl.length && v.setBuses([])); return; }
     const list = BUS.at(c); views.forEach(v => v.setBuses(list)); hadBuses = true;
   }, 125);
 
@@ -359,8 +371,8 @@
   $('#follow').onchange = e => { S.follow = e.target.checked; changed(); showKiosk(); };
   $('#bright').oninput = e => { S.bright = +e.target.value / 100; changed(); };
   $('#resetPins').onclick = () => { const m = mode(), i = Math.min(edit, S.n - 1); S.rigs[m][i] = freshRig(m, i); calChanged(true); syncUI(); };
-  const LBL = { roads: 'Roads', water: 'Water today', areas: 'Census areas', zoning: 'Zoning', mon: 'Recorded monuments', scheme: 'Proposed river crossing', relief: 'Shaded relief', grid: 'Tile grid', opw: 'OPW flood maps', buses: 'Town buses (timetable)', traffic: 'Traffic (live with a TomTom key, otherwise typical)' };
-  $('#layers').innerHTML = Object.keys(S.layers).map(k2 => `<label class="row"><input type="checkbox" data-l="${k2}"> ${LBL[k2]}</label>`).join('');
+  const LBL = { roads: 'Roads', water: 'Water today', areas: 'Census areas', zoning: 'Zoning', mon: 'Recorded monuments', scheme: 'Proposed river crossing', relief: 'Shaded relief', grid: 'Tile grid', opw: 'OPW flood maps', buses: 'Town buses (timetable)', traffic: 'Traffic (live with a TomTom key, otherwise typical)', sewer: 'Sewers (2008)', watermains: 'Water mains' };
+  $('#layers').innerHTML = Object.keys(S.layers).filter(k2 => !(k2 in { sewer: 1, watermains: 1 }) || UT[k2]).map(k2 => `<label class="row"><input type="checkbox" data-l="${k2}"> ${LBL[k2]}</label>`).join('');
   $('#layers').querySelectorAll('[data-l]').forEach(c => c.onchange = () => { S.layers[c.dataset.l] = c.checked; changed(); });
   const STEPS = {
     one: ['Hang the projector pointing straight down over Lady Erin, the centre of the model, with the lens about 3.6 m above the table (Epson EB-W06).',

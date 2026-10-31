@@ -23,6 +23,11 @@ The kiosk, the projection page and the projector windows must be open in the **s
 ## Traffic
 The **Traffic** layer shows **typical traffic** on the main roads for the time of day, on the same clock as the buses (`js/typical.js`). It is a model, not measured traffic, and needs no account. If a TomTom API key is ever added (kiosk staff panel or Projection page; kept in that browser only), the layer switches to live TomTom flow tiles.
 
+## Sewers and water mains
+`tools/make_sewer.py` turns the 2008 Sligo & Environs sewer network (MapInfo, Irish Grid) into `data/sewer.json`: reprojected to ITM, shifted 6.5 m west and 5 m north to fit the building footprints, each pipe turned to run downstream from the network's flow arrows. The kiosk and projector show a **Sewers** layer (and **Water mains** when `data/watermains.json` exists) with dots moving downstream to the outfalls.
+
+These files are **not in the repository** (`.gitignore`): utility network data is held by Uisce Éireann and may not be licensed for publication. Put them in `data/` on the exhibition computer and serve the site locally, or remove them from `.gitignore` once publishing is cleared.
+
 ## Data
 Built by `tools/make_data.py` from the God's Eye public data and the tile-generator outputs (see `tools/`). The town buses come from the Bus Éireann GTFS timetable via `tools/make_buses.py` (rerun it with a new feed when the timetable changes). Credits: Bus Éireann timetable data from the National Transport Authority; contains Irish Public Sector Data (OPW lidar, waterlevel.ie) licensed under CC BY 4.0; © OpenStreetMap contributors (ODbL); CSO Census 2022; SEAI BER; GeoDirectory; Sligo & Environs Development Plan; Tailte Éireann. Deprivation scores are reconstructed from the Pobal HP method and are not official.
 
