@@ -12,7 +12,11 @@
   const T = {
     REFRESH_MS, Z,
     key() { try { return localStorage.getItem(LS) || cfgKey; } catch (e) { return cfgKey; } },
-    setKey(k) { try { k ? localStorage.setItem(LS, k.trim()) : localStorage.removeItem(LS); } catch (e) { } },
+    // accept a pasted key with stray bits around it: quotes, key=, apiKey:, commas, spaces
+    clean(k) { k = (k || '').trim().replace(/^.*?(?:key|apikey|api_key)\s*[=:]\s*/i, '').replace(/[\s"'`;,)&]+.*$/, '').replace(/^["'`]+/, ''); return k; },
+    setKey(k) { k = T.clean(k); try { k ? localStorage.setItem(LS, k) : localStorage.removeItem(LS); } catch (e) { } return k; },
+    // a safe description of the saved key: its length and first four characters
+    describe() { const k = T.key(); if (!k) return 'no key saved'; const ok = /^[A-Za-z0-9]{32}$/.test(k); return `saved key: ${k.length} characters, starts ${k.slice(0, 4)}…${ok ? '' : k.startsWith('eyJ') ? ' (this looks like a Cesium ion token, not a TomTom key)' : ' (TomTom keys are 32 letters and numbers)'}`; },
     setConfigKey(k) { cfgKey = (k || '').trim(); },
     bucket(now = Date.now()) { return Math.floor(now / REFRESH_MS); },
     url(z, x, y, b = T.bucket()) { return `https://api.tomtom.com/traffic/map/4/tile/flow/${STYLE}/${z}/${x}/${y}.png?key=${encodeURIComponent(T.key())}&tileSize=256&thickness=10&t=${b}`; },
@@ -32,10 +36,10 @@
         let r;
         try { r = await fetch(u, { cache: 'no-store', mode: 'cors' }); }
         catch (e) { return { ok: false, msg: 'The browser could not read TomTom\'s reply (network blocked, offline, or TomTom not allowing this website). ' + e.message }; }
-        if (r.ok) { STYLE = st; try { localStorage.setItem(LSS, st); } catch (e) { } return { ok: true, msg: `TomTom accepted the key (style ${st}).` }; }
+        if (r.ok) { STYLE = st; try { localStorage.setItem(LSS, st); } catch (e) { } return { ok: true, msg: `TomTom accepted the key (style ${st}; ${T.describe()}).` }; }
         let body = ''; try { body = (await r.text()).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220); } catch (e) { }
         last = `TomTom said HTTP ${r.status}${body ? ': ' + body : ''}`;
-        if (r.status === 401 || r.status === 403 || r.status === 429) break;  // the key, not the style
+        if (r.status === 401 || r.status === 403 || r.status === 429) { last += ' · ' + T.describe(); break; }  // the key, not the style
       }
       return { ok: false, msg: last };
     },
