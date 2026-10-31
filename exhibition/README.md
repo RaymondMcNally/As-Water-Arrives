@@ -45,6 +45,14 @@ A **West / east** layout is also available, with both projectors turned 90° so 
 ## Traffic
 **03 On the model › Traffic** colours the main roads by how busy they typically are at that time of day, using the same clock as the buses (**Now** or **A day in 3 minutes**). It needs no account and is labelled as modelled, not live. Optional: a TomTom API key pasted into the staff panel makes it live.
 
+### A recorded TomTom day for "A day in 3 minutes"
+TomTom only gives traffic as it is now, so record a real weekday first:
+1. In the exhibition Chrome profile, with the TomTom key saved, open `record.html` (linked from the Projection page).
+2. Press **Start recording** on a weekday morning and leave the page open until the next morning. Keep the computer awake and plugged in. It takes a snapshot every 15 minutes (about 4,700 TomTom tiles a day).
+3. When the day has at least 72 of 96 snapshots it is marked **used for the replay**. The kiosk's **A day in 3 minutes** then replays it; **Now** stays live.
+
+Recorded on another computer? **Export** there and **Import** on the exhibition computer. The recording stays in the browser; it isn't published with the website.
+
 ## Staff
 - **Staff panel:** hold the bottom-right dot for 3 s, then enter the PIN (`staffPin` in `config.json`, `1234` to start). The PIN only keeps visitors out of the set-up: it sits in a public file, so it is not security.
 - **Staff panel buttons:** open the projector windows (both, when the Projection page is set to two), calibrate, go full screen, reset the kiosk, or leave exhibition mode.

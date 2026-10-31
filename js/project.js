@@ -88,7 +88,7 @@
   const TT = AW.traffic; getJSON('exhibition/config.json').then(c => TT.setConfigKey(c.tomtomKey)).catch(() => { });
   const CIRC = MJ.circle.coordinates[0], TBOX = [Math.min(...CIRC.map(c => c[0])), Math.min(...CIRC.map(c => c[1])), Math.max(...CIRC.map(c => c[0])), Math.max(...CIRC.map(c => c[1]))];
   let TR = null, trB = -1, trBusy = false;
-  const TY = AW.typicalTraffic;                                         // without live data: typical traffic on the main roads
+  const TY = AW.typicalTraffic, RC = AW.trafficRec, LV = [.3, .6, .8, 1];                                         // without live data: typical traffic on the main roads
   const MAIN = RD.filter(r => TY.W[r.c]).flatMap(r => (r.g.type === 'MultiLineString' ? r.g.coordinates : [r.g.coordinates]).map(cs => {
     const m = cs[cs.length >> 1]; return { c: r.c, cs, d: Math.hypot(m[0] - CX, m[1] - CY) };
   }));                               // the last traffic download and its refresh bucket
@@ -118,7 +118,7 @@
       const fl = ks && ks.flood;
       if (L.opw) [1, 5, 10].forEach(a => { const o = OPW.find(x => x.p.level === a); if (o) fill(o.g, Q.C.opwBands[a], .95); });
       if (fl) { const f = F.find(x => x.p.src === fl.src && x.p.level === fl.level); if (f) { fill(f.g, fl.src === 'sea' ? '#3fa9f5' : fl.src === 'lake' ? '#36c6d3' : Q.C.opw, .95); tx.strokeStyle = '#d8f1ff'; tx.lineWidth = 3; tx.beginPath(); path(f.g); tx.stroke(); } }
-      const trOn = L.traffic && TR && TR.ok;
+      const trOn = L.traffic && TR && TR.ok && !(ks && ks.busFast);
       if (L.roads) { tx.globalAlpha = L.traffic ? .35 : 1; tx.strokeStyle = '#ffffff'; tx.lineCap = 'round'; tx.lineJoin = 'round'; RD.forEach(r => { const w = RW[r.c]; if (!w) return; tx.lineWidth = w * k; tx.beginPath(); path(r.g); tx.stroke(); }); tx.globalAlpha = 1; }
       if (trOn) {                                                        // TomTom tiles, each placed by three of its corners
         tx.imageSmoothingEnabled = true;
@@ -295,8 +295,9 @@
   let hadBuses = false, tyStep = null;
   setInterval(() => {
     const ks = S.follow ? S.kiosk : null, L = ks ? ks.layers : S.layers, on = !!(L && L.buses) && !S.test;
-    const tyOn = !!(L && L.traffic) && !(TR && TR.ok) && !S.test, c = BUS.clock(!!(ks && ks.busFast)), st = tyOn ? TY.step(c) + (c.fast ? 'f' : '') + c.day : null;
-    if (st !== tyStep) { tyStep = st; const list = tyOn ? MAIN.map(m => TY.level(m.c, m.d, c)) : null; views.forEach(v => v.setTypical(list)); }
+    const c = BUS.clock(!!(ks && ks.busFast)), tyOn = !!(L && L.traffic) && (!(TR && TR.ok) || c.fast) && !S.test;
+    const rd = tyOn && c.fast ? (d => d && d.n === MAIN.length ? d : null)(RC.bestDay()) : null, st = tyOn ? TY.step(c) + (c.fast ? 'f' : '') + c.day + (rd ? rd.date : '') : null;
+    if (st !== tyStep) { tyStep = st; const lv = rd ? RC.at(rd, c.t) : null; const list = tyOn ? MAIN.map((m, i) => lv && lv[i] >= 0 ? LV[lv[i]] : TY.level(m.c, m.d, c)) : null; views.forEach(v => v.setTypical(list)); }
     if (!on) { if (hadBuses) { views.forEach(v => v.setBuses([])); hadBuses = false; } return; }
     const list = BUS.at(c); views.forEach(v => v.setBuses(list)); hadBuses = true;
   }, 125);

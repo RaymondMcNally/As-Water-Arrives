@@ -54,7 +54,7 @@
         const r = await fetch(T.url(z, x, y, b), { cache: 'force-cache', mode: 'cors' });
         if (!r.ok) { const e = new Error(r.status === 403 || r.status === 401 ? 'key' : 'http'); e.status = r.status; throw e; }
         const img = await createImageBitmap(await r.blob()), c = (i, j) => AW.toITM(T.x2lon(x + i, z), T.y2lat(y + j, z));
-        return { img, nw: c(0, 0), ne: c(1, 0), sw: c(0, 1) };
+        return { img, nw: c(0, 0), ne: c(1, 0), sw: c(0, 1), x, y, z };
       })());
       try { return { ok: true, when: Date.now(), tiles: await Promise.all(jobs) }; }
       catch (err) { return { ok: false, why: err.message === 'key' ? 'key' : err.message === 'http' ? 'http' : 'net', status: err.status }; }

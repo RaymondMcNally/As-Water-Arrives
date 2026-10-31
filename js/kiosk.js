@@ -42,7 +42,9 @@
 
   const BUS = await AW.buses();
   const TT = AW.traffic; TT.setConfigKey(cfg.tomtomKey); let ttB = -1, ttErr = '', ttRetry = 0;
-  const TY = AW.typicalTraffic; let tyStep = null;
+  const TY = AW.typicalTraffic, RC = AW.trafficRec; let tyStep = null;
+  const LV = [.3, .6, .8, 1];                                   // recorded level → the colour scale typical traffic uses
+  const recDay = () => { const d = RC.bestDay(); return d && d.n === typFC.features.length ? d : null; };
   const live = () => !!TT.key() && !ttErr;                  // live TomTom when there is a working key, typical traffic otherwise
 
   // ---------------------------------------------------------------- map
@@ -100,14 +102,17 @@
   map.addSource('typ', { type: 'geojson', data: typFC });
   map.addLayer({ id: 'typ', type: 'line', source: 'typ', layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'col'], 'line-width': ['match', ['get', 'fc'], ['trunk', 'primary', 'motorway'], 4, 3] } }, 'b');
   function typTick() {
-    const on = K.layers.traffic && !live(); map.setLayoutProperty('typ', 'visibility', on ? 'visible' : 'none'); if (!on) { tyStep = null; return; }
-    const c = BUS.clock(K.busFast), st = TY.step(c) + (c.fast ? 'f' : '') + c.day; if (st === tyStep) return; tyStep = st;
-    typFC.features.forEach(f => { f.properties.col = TY.colour(TY.level(f.properties.fc, f.properties.d, c)); }); map.getSource('typ').setData(typFC);
-    const el = $('#typClock'); if (el) el.textContent = `Typical traffic at ${BUS.hhmm(Math.floor(c.t / 600) * 600)}, ${c.fast ? 'weekday' : BUS.dayName[c.day]} · modelled, not live`;
+    // Now: live TomTom if it works, else typical. A day in 3 minutes: a recorded TomTom weekday if there is one, else typical
+    const on = K.layers.traffic && (!live() || K.busFast); map.setLayoutProperty('typ', 'visibility', on ? 'visible' : 'none'); if (!on) { tyStep = null; return; }
+    const c = BUS.clock(K.busFast), rd = c.fast ? recDay() : null, st = TY.step(c) + (c.fast ? 'f' : '') + c.day + (rd ? rd.date : ''); if (st === tyStep) return; tyStep = st;
+    const lv = rd ? RC.at(rd, c.t) : null;
+    typFC.features.forEach((f, i) => { f.properties.col = TY.colour(lv && lv[i] >= 0 ? LV[lv[i]] : TY.level(f.properties.fc, f.properties.d, c)); }); map.getSource('typ').setData(typFC);
+    const el = $('#typClock'), hm = BUS.hhmm(Math.floor(c.t / 600) * 600);
+    if (el) el.textContent = rd ? `TomTom traffic recorded ${RC.label(rd)}, replayed: ${hm}` : `Typical traffic at ${hm}, ${c.fast ? 'weekday' : BUS.dayName[c.day]} · modelled, not live`;
   }
   function trafficTick() {
     typTick();
-    const on = K.layers.traffic && live(), b = TT.bucket();
+    const on = K.layers.traffic && live() && !K.busFast, b = TT.bucket();
     if (!on) { if (map.getLayer('traffic')) map.setLayoutProperty('traffic', 'visibility', 'none'); return; }
     if (!map.getSource('traffic')) {
       map.addSource('traffic', { type: 'raster', tiles: [TT.template(b)], tileSize: 256, minzoom: 12, maxzoom: 15, attribution: '© TomTom' });
@@ -166,9 +171,9 @@
     if (litA.size) L.push([C.match, 'Census areas that match']);
     if (K.layers.areas) areaColours(D.A, K.areaKey).legend.forEach(x => L.push(x));
     if (K.layers.scheme) L.push([C.scheme, 'Proposed Garavogue crossing']);
-    if (K.layers.traffic) { (live() ? TT.legend : TY.legend).forEach(x => L.push(x)); if (TT.key() && ttErr) L.push(['#555', 'Live TomTom data did not load (see staff panel)']); }
+    if (K.layers.traffic) { (live() && !K.busFast ? TT.legend : TY.legend).forEach(x => L.push(x)); if (TT.key() && ttErr) L.push(['#555', 'Live TomTom data did not load (see staff panel)']); }
     if (K.layers.buses) BUS.routes.forEach(r => L.push([r.col, `Bus ${r.id}: ${r.name.replace(/ - /g, ' – ')}`]));
-    $('#legend').innerHTML = L.map(([c, t]) => `<div><i style="background:${c}"></i>${esc(t)}</div>`).join('') + (K.layers.buses ? '<div class="k-busclock" id="busClock"></div>' : '') + (K.layers.traffic ? (live() ? '<div class="k-busclock">Traffic © TomTom, live, updated every 5 minutes</div>' : '<div class="k-busclock" id="typClock"></div>') : '');
+    $('#legend').innerHTML = L.map(([c, t]) => `<div><i style="background:${c}"></i>${esc(t)}</div>`).join('') + (K.layers.buses ? '<div class="k-busclock" id="busClock"></div>' : '') + (K.layers.traffic ? (live() && !K.busFast ? '<div class="k-busclock">Traffic © TomTom, live, updated every 5 minutes</div>' : '<div class="k-busclock" id="typClock"></div>') : '');
     tyStep = null;
     busTick();
   }
@@ -269,8 +274,8 @@
     $('#layerTiles').append(b);
   });
   const syncTiles = () => { document.querySelectorAll('.k-tile').forEach(b => b.setAttribute('aria-pressed', !!K.layers[b.dataset.id])); $('#busReal').setAttribute('aria-pressed', String(!K.busFast)); $('#busFast').setAttribute('aria-pressed', String(!!K.busFast)); };
-  $('#busReal').onclick = () => { touch(); K.busFast = false; syncTiles(); busTick(); sendState(); };
-  $('#busFast').onclick = () => { touch(); K.busFast = true; syncTiles(); busTick(); sendState(); };
+  $('#busReal').onclick = () => { touch(); K.busFast = false; syncTiles(); showLayers(); sendState(); };
+  $('#busFast').onclick = () => { touch(); K.busFast = true; syncTiles(); showLayers(); sendState(); };
   function busTick() {
     if (K.layers.traffic) typTick();
     if (!K.layers.buses) return;

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Record traffic · As Water Arrives</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/site.css">
+<style>
+  .rec { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 22px; padding: 22px 0 40px; align-items: start }
+  @media (max-width: 860px) { .rec { grid-template-columns: 1fr } }
+  .big { font: 600 40px var(--f-mono); letter-spacing: -.02em }
+  .bar { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 4px }
+  .bar i { display: block; height: 100%; background: var(--sea) }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; background: var(--paper) }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line) }
+  th { font: 500 11.5px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2) }
+  .strip { display: flex; height: 18px; border-radius: 3px; overflow: hidden; min-width: 200px }
+  .strip i { flex: 1 }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="index.html"><b>As Water Arrives</b><span>Sligo borough model · A-IARG 2027</span></a>
+    <nav aria-label="Pages"><a href="index.html">The model</a><a href="kiosk.html">Kiosk</a><a href="project.html">Projection</a><a href="model.html">Make a model</a><a href="data.html">Data</a></nav>
+  </div>
+</header>
+<main>
+  <div class="wrap">
+    <section style="padding:28px 0 0">
+      <div class="eyebrow">Staff · traffic</div>
+      <h1>Record a day of <em>TomTom</em> traffic.</h1>
+      <p class="lede">Leave this page open for a full weekday. Every 15 minutes it reads TomTom's live traffic for each main road on the model and keeps the result in this browser. The kiosk's <b>A day in 3 minutes</b> then replays the latest complete weekday.</p>
+    </section>
+    <div class="rec">
+      <div>
+        <div class="panel">
+          <div class="row" style="justify-content:space-between;align-items:baseline">
+            <div><div class="note">Status</div><div class="big" id="state">Stopped</div></div>
+            <div style="text-align:right"><div class="note">Next snapshot</div><div class="big" id="next">–</div></div>
+          </div>
+          <div class="bar"><i id="prog" style="width:0"></i></div>
+          <p class="note" id="progTxt"></p>
+          <p class="status" id="msg"></p>
+          <div class="row" style="margin-top:12px;flex-wrap:wrap;gap:8px">
+            <button type="button" class="btn primary" id="go">Start recording</button>
+            <button type="button" class="btn" id="now">Take a snapshot now</button>
+          </div>
+        </div>
+        <h2 style="margin-top:28px">Recorded days</h2>
+        <div style="overflow-x:auto"><table id="days"></table></div>
+        <p class="note">Each strip is one day, midnight to midnight: the share of the main roads that were slow or queuing in each quarter-hour (darker = more congested; blank = no snapshot). A weekday needs at least 72 of its 96 snapshots to be used.</p>
+      </div>
+      <aside class="panel">
+        <div class="grp">
+          <h3>Keep the computer awake</h3>
+          <p class="note">The recording only runs while this page is open and the computer is awake. The page asks the browser to keep the screen on; also set the Mac never to sleep (System Settings › Energy, or Lock Screen › Turn display off: Never) and keep it plugged in. Don't close the tab.</p>
+        </div>
+        <div class="grp">
+          <h3>TomTom key</h3>
+          <p class="status" id="key"></p>
+          <p class="note">The key is the one saved on the kiosk staff panel or the Projection page, in this browser. One snapshot uses about 50 tiles, so a whole day is about 4,700 of the free 200,000 a month.</p>
+        </div>
+        <div class="grp">
+          <h3>Move a recording</h3>
+          <p class="note">The recording lives in this browser. To use it on the exhibition computer, export it here and import it there (on this page, in the exhibition Chrome profile).</p>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn sm" id="exp">Export</button>
+            <label class="btn sm" style="cursor:pointer">Import<input type="file" id="imp" accept=".json,application/json" hidden></label>
+            <button type="button" class="btn sm" id="clr">Delete all</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</main>
+<footer class="foot"><div class="wrap"><span>Traffic data © TomTom. Kept in this browser only.</span><span>Created by R McNally</span></div></footer>
+<script src="js/common.js"></script>
+<script src="js/typical.js"></script>
+<script src="js/traffic.js"></script>
+<script src="js/trafficrec.js"></script>
+<script src="js/record.js"></script>
+</body>
+</html>
