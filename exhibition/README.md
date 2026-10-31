@@ -42,8 +42,8 @@ A **West / east** layout is also available, with both projectors turned 90° so 
 
 **One projector:** choose **One** under Projectors. The lens must then be about 3.6 m above the table to cover the whole model, and the pins are **N, E, S, W**.
 
-## Live traffic
-Get a free API key from developer.tomtom.com. At the kiosk, open the staff panel (hold the dot, enter the PIN), paste the key under **TomTom API key** and press **Save key**. It is kept in this browser profile only. The traffic layer is then under **03 On the model › Live traffic**.
+## Traffic
+**03 On the model › Traffic** colours the main roads by how busy they typically are at that time of day, using the same clock as the buses (**Now** or **A day in 3 minutes**). It needs no account and is labelled as modelled, not live. Optional: a TomTom API key pasted into the staff panel makes it live.
 
 ## Staff
 - **Staff panel:** hold the bottom-right dot for 3 s, then enter the PIN (`staffPin` in `config.json`, `1234` to start). The PIN only keeps visitors out of the set-up: it sits in a public file, so it is not security.

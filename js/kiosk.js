@@ -31,7 +31,7 @@
     { id: 'grid', n: 'Tile grid', s: 'The 52 printed tiles', col: '#f0a54a', on: false },
     { id: 'opw', n: 'OPW flood maps', s: 'River: 1 in 10, 20 and 100 years', col: '#8f86ff', on: false },
     { id: 'buses', n: 'Town buses', s: 'S1, S2 and S3, from the timetable', col: '#ff4f7b', on: false },
-    { id: 'traffic', n: 'Live traffic', s: 'TomTom: roads by speed', col: '#e53935', on: false }
+    { id: 'traffic', n: 'Traffic', s: 'Main roads, typical for the time of day', col: '#e53935', on: false }
   ];
   const DEF = () => ({ tab: 'water', src: 'sea', level: 3.0, flood: true, preset: -1, query: null, layers: Object.fromEntries(LAYERS.map(l => [l.id, l.on])), areaKey: 'pct_ber_e_to_g', busFast: false });
   let K = DEF(), touched = false, lastTouch = Date.now();
@@ -42,6 +42,8 @@
 
   const BUS = await AW.buses();
   const TT = AW.traffic; TT.setConfigKey(cfg.tomtomKey); let ttB = -1, ttErr = '';
+  const TY = AW.typicalTraffic; let tyStep = null;
+  const live = () => !!TT.key() && !ttErr;                  // live TomTom when there is a working key, typical traffic otherwise
 
   // ---------------------------------------------------------------- map
   boot('Drawing the map…');
@@ -91,8 +93,21 @@
   map.addLayer({ id: 'bus-lines', type: 'line', source: 'bus-lines', layout: { visibility: 'none', 'line-join': 'round' }, paint: { 'line-color': ['get', 'col'], 'line-width': 1.6, 'line-opacity': .45 } });
   map.addLayer({ id: 'bus', type: 'circle', source: 'bus', layout: { visibility: 'none' }, paint: { 'circle-radius': 5.5, 'circle-color': ['get', 'col'], 'circle-stroke-color': '#050d10', 'circle-stroke-width': 1.5 } });
   // live traffic: TomTom raster tiles over the roads, refreshed every few minutes while the layer is on
+  // typical traffic: the main roads as lines, recoloured every 10 minutes of clock time
+  const typFC = { type: 'FeatureCollection', features: [] };
+  RJ.features.forEach(f => { if (!TY.W[f.properties.fclass]) return; const g = f.geometry, parts = g.type === 'MultiLineString' ? g.coordinates : [g.coordinates];
+    parts.forEach(cs => { const m = toITM(...cs[cs.length >> 1]); typFC.features.push({ type: 'Feature', properties: { fc: f.properties.fclass, d: Math.hypot(m[0] - MJ.centre[0], m[1] - MJ.centre[1]), col: '#3cb44b' }, geometry: { type: 'LineString', coordinates: cs } }); }); });
+  map.addSource('typ', { type: 'geojson', data: typFC });
+  map.addLayer({ id: 'typ', type: 'line', source: 'typ', layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'col'], 'line-width': ['match', ['get', 'fc'], ['trunk', 'primary', 'motorway'], 4, 3] } }, 'b');
+  function typTick() {
+    const on = K.layers.traffic && !live(); map.setLayoutProperty('typ', 'visibility', on ? 'visible' : 'none'); if (!on) { tyStep = null; return; }
+    const c = BUS.clock(K.busFast), st = TY.step(c) + (c.fast ? 'f' : '') + c.day; if (st === tyStep) return; tyStep = st;
+    typFC.features.forEach(f => { f.properties.col = TY.colour(TY.level(f.properties.fc, f.properties.d, c)); }); map.getSource('typ').setData(typFC);
+    const el = $('#typClock'); if (el) el.textContent = `Typical traffic at ${BUS.hhmm(Math.floor(c.t / 600) * 600)}, ${c.fast ? 'weekday' : BUS.dayName[c.day]} · modelled, not live`;
+  }
   function trafficTick() {
-    const on = K.layers.traffic && !!TT.key(), b = TT.bucket();
+    typTick();
+    const on = K.layers.traffic && live(), b = TT.bucket();
     if (!on) { if (map.getLayer('traffic')) map.setLayoutProperty('traffic', 'visibility', 'none'); return; }
     if (!map.getSource('traffic')) {
       map.addSource('traffic', { type: 'raster', tiles: [TT.template(b)], tileSize: 256, minzoom: 12, maxzoom: 15, attribution: '© TomTom' });
@@ -100,7 +115,7 @@
     } else if (ttB !== b) { map.getSource('traffic').setTiles([TT.template(b)]); ttB = b; }
     map.setLayoutProperty('traffic', 'visibility', 'visible');
   }
-  map.on('error', e => { if (e.sourceId === 'traffic' && !ttErr) { ttErr = 'TomTom traffic did not load: check the key in the staff panel'; legend(); } });
+  map.on('error', e => { if (e.sourceId === 'traffic' && !ttErr) { ttErr = 'TomTom did not load'; trafficTick(); legend(); } });
   setInterval(trafficTick, 15000);
   map.addLayer({ id: 'out', type: 'fill', source: 'out', paint: { 'fill-color': '#050d10', 'fill-opacity': .9 } });
   map.addLayer({ id: 'ring', type: 'line', source: 'ring', paint: { 'line-color': '#f0a54a', 'line-width': 1.6, 'line-dasharray': [3, 2] } });
@@ -138,7 +153,7 @@
     const vis = (id, on) => map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
     vis('roads', K.layers.roads); vis('water', K.layers.water); vis('zoning', K.layers.zoning); vis('mon', K.layers.mon);
     vis('scheme', K.layers.scheme); vis('opw', K.layers.opw); vis('tiles', K.layers.grid); vis('hs', true); map.setPaintProperty('hs', 'raster-opacity', K.layers.relief ? .8 : .45);
-    vis('area-fill', K.layers.areas); trafficTick(); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses; busTick();
+    vis('area-fill', K.layers.areas); trafficTick(); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses && !K.layers.traffic; busTick();
     if (K.layers.areas) { const cm = areaColours(D.A, K.areaKey), pairs = []; D.A.forEach(a => { const c = cm.get(a.properties[K.areaKey]); if (c) pairs.push(a.properties.sa_pub2022, c); });
       map.setPaintProperty('area-fill', 'fill-color', pairs.length ? ['match', ['get', 'sa_pub2022'], ...pairs, 'rgba(0,0,0,0)'] : 'rgba(0,0,0,0)'); }
     legend();
@@ -151,9 +166,10 @@
     if (litA.size) L.push([C.match, 'Census areas that match']);
     if (K.layers.areas) areaColours(D.A, K.areaKey).legend.forEach(x => L.push(x));
     if (K.layers.scheme) L.push([C.scheme, 'Proposed Garavogue crossing']);
-    if (K.layers.traffic) { if (!TT.key()) L.push(['#555', 'Live traffic ' + TT.why.nokey]); else if (ttErr) L.push(['#555', ttErr]); else TT.legend.forEach(x => L.push(x)); }
+    if (K.layers.traffic) (live() ? TT.legend : TY.legend).forEach(x => L.push(x));
     if (K.layers.buses) BUS.routes.forEach(r => L.push([r.col, `Bus ${r.id}: ${r.name.replace(/ - /g, ' – ')}`]));
-    $('#legend').innerHTML = L.map(([c, t]) => `<div><i style="background:${c}"></i>${esc(t)}</div>`).join('') + (K.layers.buses ? '<div class="k-busclock" id="busClock"></div>' : '') + (K.layers.traffic && TT.key() && !ttErr ? '<div class="k-busclock">Traffic © TomTom, live, updated every 5 minutes</div>' : '');
+    $('#legend').innerHTML = L.map(([c, t]) => `<div><i style="background:${c}"></i>${esc(t)}</div>`).join('') + (K.layers.buses ? '<div class="k-busclock" id="busClock"></div>' : '') + (K.layers.traffic ? (live() ? '<div class="k-busclock">Traffic © TomTom, live, updated every 5 minutes</div>' : '<div class="k-busclock" id="typClock"></div>') : '');
+    tyStep = null;
     busTick();
   }
 
@@ -256,6 +272,7 @@
   $('#busReal').onclick = () => { touch(); K.busFast = false; syncTiles(); busTick(); sendState(); };
   $('#busFast').onclick = () => { touch(); K.busFast = true; syncTiles(); busTick(); sendState(); };
   function busTick() {
+    if (K.layers.traffic) typTick();
     if (!K.layers.buses) return;
     const c = BUS.clock(K.busFast), at = BUS.at(c), cl = $('#busClock');
     map.getSource('bus').setData({ type: 'FeatureCollection', features: at.map(b => ({ type: 'Feature', properties: { col: BUS.routes[b.r].col }, geometry: { type: 'Point', coordinates: fromITM(b.E, b.N) } })) });

@@ -81,12 +81,12 @@
           <select id="areaKey" class="k-select" aria-label="Colour the census areas by"></select>
         </div>
         <div class="k-group" id="busCtl" hidden>
-          <span class="k-lab">Town buses</span>
+          <span class="k-lab">Clock for the buses and traffic</span>
           <div class="k-seg k-seg-sm" role="group" aria-label="Bus clock">
             <button type="button" id="busReal" aria-pressed="true">Now</button>
             <button type="button" id="busFast" aria-pressed="false">A day in 3 minutes</button>
           </div>
-          <p class="k-note">Each dot is a bus where the Bus Éireann timetable says it should be, not a live position.</p>
+          <p class="k-note">Each bus dot is where the Bus Éireann timetable says it should be. The traffic colours are a model of a typical day, not live counts.</p>
         </div>
       </section>
 
@@ -100,7 +100,7 @@
         <h3>The OPW flood maps</h3>
         <p>"OPW flood maps" shows the Office of Public Works' river flood extents for Sligo from floodinfo.ie: the land with a 10%, 5% or 1% chance of flooding from the river in any one year. They are indicative maps; floodinfo.ie has the official versions and their conditions of use.</p>
         <h3>Credits</h3>
-        <p class="k-small">Model and website by R McNally, ATU Sligo Department of Architecture, for the 16th A-IARG conference, "As Water Arrives: Architecture and Change". Data: CSO Census 2022, Bus Éireann timetable (NTA), live traffic © TomTom, SEAI BER, GeoDirectory, Sligo &amp; Environs Development Plan, OPW lidar and water levels (CC BY 4.0), © OpenStreetMap contributors, Tailte Éireann. Deprivation scores are reconstructed from the Pobal HP method and are not official.</p>
+        <p class="k-small">Model and website by R McNally, ATU Sligo Department of Architecture, for the 16th A-IARG conference, "As Water Arrives: Architecture and Change". Data: CSO Census 2022, Bus Éireann timetable (NTA), typical traffic modelled from OpenStreetMap road classes, SEAI BER, GeoDirectory, Sligo &amp; Environs Development Plan, OPW lidar and water levels (CC BY 4.0), © OpenStreetMap contributors, Tailte Éireann. Deprivation scores are reconstructed from the Pobal HP method and are not official.</p>
       </section>
     </div>
   </main>
@@ -129,7 +129,7 @@
       <button type="button" class="k-btn" id="staffBack">Back to the kiosk</button>
     </div>
     <div class="k-ttkey">
-      <label class="k-small" for="ttKey">TomTom API key for live traffic (kept in this browser only; leave blank to remove)</label>
+      <label class="k-small" for="ttKey">TomTom API key, optional: makes the Traffic layer live (kept in this browser only; leave blank to remove)</label>
       <div class="k-row"><input type="password" id="ttKey" class="k-select" autocomplete="off" placeholder="Paste the key"><button type="button" class="k-btn k-btn-sm" id="ttSave">Save key</button></div>
       <p class="k-small" id="ttState"></p>
     </div>
@@ -143,6 +143,7 @@
 <script src="js/query.js"></script>
 <script src="js/buses.js"></script>
 <script src="js/traffic.js"></script>
+<script src="js/typical.js"></script>
 <script src="js/kiosk.js"></script>
 </body>
 </html>

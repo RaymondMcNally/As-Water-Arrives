@@ -87,7 +87,11 @@
   const BUS = await AW.buses();
   const TT = AW.traffic; getJSON('exhibition/config.json').then(c => TT.setConfigKey(c.tomtomKey)).catch(() => { });
   const CIRC = MJ.circle.coordinates[0], TBOX = [Math.min(...CIRC.map(c => c[0])), Math.min(...CIRC.map(c => c[1])), Math.max(...CIRC.map(c => c[0])), Math.max(...CIRC.map(c => c[1]))];
-  let TR = null, trB = -1, trBusy = false;                               // the last traffic download and its refresh bucket
+  let TR = null, trB = -1, trBusy = false;
+  const TY = AW.typicalTraffic;                                         // without live data: typical traffic on the main roads
+  const MAIN = RD.filter(r => TY.W[r.c]).flatMap(r => (r.g.type === 'MultiLineString' ? r.g.coordinates : [r.g.coordinates]).map(cs => {
+    const m = cs[cs.length >> 1]; return { c: r.c, cs, d: Math.hypot(m[0] - CX, m[1] - CY) };
+  }));                               // the last traffic download and its refresh bucket
   const HS = await new Promise(r => { const im = new Image(); im.onload = () => r(im); im.onerror = () => r(null); im.src = 'data/hillshade.png'; });
 
   // ---------------------------------------------------------------- the texture: north up, the 4.1 km square
@@ -115,7 +119,7 @@
       if (L.opw) [1, 5, 10].forEach(a => { const o = OPW.find(x => x.p.level === a); if (o) fill(o.g, Q.C.opwBands[a], .95); });
       if (fl) { const f = F.find(x => x.p.src === fl.src && x.p.level === fl.level); if (f) { fill(f.g, fl.src === 'sea' ? '#3fa9f5' : fl.src === 'lake' ? '#36c6d3' : Q.C.opw, .95); tx.strokeStyle = '#d8f1ff'; tx.lineWidth = 3; tx.beginPath(); path(f.g); tx.stroke(); } }
       const trOn = L.traffic && TR && TR.ok;
-      if (L.roads) { tx.globalAlpha = trOn ? .35 : 1; tx.strokeStyle = '#ffffff'; tx.lineCap = 'round'; tx.lineJoin = 'round'; RD.forEach(r => { const w = RW[r.c]; if (!w) return; tx.lineWidth = w * k; tx.beginPath(); path(r.g); tx.stroke(); }); tx.globalAlpha = 1; }
+      if (L.roads) { tx.globalAlpha = L.traffic ? .35 : 1; tx.strokeStyle = '#ffffff'; tx.lineCap = 'round'; tx.lineJoin = 'round'; RD.forEach(r => { const w = RW[r.c]; if (!w) return; tx.lineWidth = w * k; tx.beginPath(); path(r.g); tx.stroke(); }); tx.globalAlpha = 1; }
       if (trOn) {                                                        // TomTom tiles, each placed by three of its corners
         tx.imageSmoothingEnabled = true;
         TR.tiles.forEach(t => {
@@ -202,13 +206,13 @@
       fragmentShader: 'varying float va; void main(){ gl_FragColor = vec4(0.0, 0.0, 0.0, va); }'
     }));
     mask.renderOrder = 1; scene.add(mask);
-    const oc = overlay.getContext('2d'); let wpx = 2, hpx = 2, fcur = null, pxm = 1, buses = [];
+    const oc = overlay.getContext('2d'); let wpx = 2, hpx = 2, fcur = null, pxm = 1, buses = [], typ = null, typScr = null;
     const live = () => which() < S.n;
     function rez() { for (let j = 0; j <= NM; j++) for (let i = 0; i <= NM; i++) zz[j * (NM + 1) + i] = zAt(X0 + i / NM * SZ, Y0 + j / NM * SZ); warp(); }
     function warp() {
       if (!live()) { draw(); return; }
       const pi = which(), f = mapper(pi, wpx, hpx), gi = 1 / Math.max(.5, S.gamma);
-      fcur = f; { const z0 = zAt(CX, CY), a = f(CX, CY, z0), b = f(CX + 50, CY, z0); pxm = Math.hypot(b[0] - a[0], b[1] - a[1]) / 50; }
+      fcur = f; typScr = null; { const z0 = zAt(CX, CY), a = f(CX, CY, z0), b = f(CX + 50, CY, z0); pxm = Math.hypot(b[0] - a[0], b[1] - a[1]) / 50; }
       for (let j = 0; j <= NM; j++) for (let i = 0; i <= NM; i++) {
         const q = j * (NM + 1) + i, E = X0 + i / NM * SZ, N = Y0 + j / NM * SZ, [sx, sy] = f(E, N, zz[q]);
         pos[q * 3] = sx; pos[q * 3 + 1] = sy; al[q] = 1 - Math.pow(weight(pi, E, N), gi);
@@ -227,6 +231,18 @@
       oc.clearRect(0, 0, wpx, hpx); overlay.style.pointerEvents = S.cal && live() ? 'auto' : 'none';
       const fs = Math.round(Math.max(12, Math.min(wpx, hpx) * .025));
       if (!live()) { oc.fillStyle = '#555'; oc.font = `500 ${fs}px "IBM Plex Mono", monospace`; oc.textAlign = 'center'; oc.fillText(`Projector ${which() + 1} is not used in the one-projector set-up`, wpx / 2, hpx / 2); oc.textAlign = 'start'; return; }
+      if (typ && fcur) {                                              // typical traffic: each main road in its colour
+        const pi = which();
+        if (!typScr) typScr = MAIN.map(m => m.cs.map(([E, N]) => { const [x, y] = fcur(E, N, zAt(E, N)); return [x, y, (E - CX) ** 2 + (N - CY) ** 2 <= R * R && weight(pi, E, N) >= .5]; }));
+        oc.globalAlpha = S.bright; oc.lineCap = 'round'; oc.lineJoin = 'round';
+        MAIN.forEach((m, i) => {
+          const s = typ[i]; if (s < 0) return; const pts = typScr[i]; oc.strokeStyle = TY.colour(s); oc.lineWidth = Math.max(2, (RW[m.c] || 8) * 1.1 * pxm);
+          oc.beginPath(); let pen = false;
+          for (let j = 1; j < pts.length; j++) { const a = pts[j - 1], b = pts[j]; if (!(a[2] && b[2])) { pen = false; continue; } if (!pen) { oc.moveTo(a[0], a[1]); pen = true; } oc.lineTo(b[0], b[1]); }
+          oc.stroke();
+        });
+        oc.globalAlpha = 1;
+      }
       if (buses.length && fcur) {                                     // town buses: a dot 8 mm across on the model (20 m)
         const pi = which(), rad = Math.max(3, 10 * pxm); oc.globalAlpha = S.bright;
         buses.forEach(b => {
@@ -254,7 +270,7 @@
     overlay.addEventListener('pointerup', () => { if (drag >= 0) { drag = -1; calChanged(true); } });
     const nudge = (dx, dy) => { if (!live()) return; const p = rig(which()).pins; p[sel] = [p[sel][0] + dx / wpx, p[sel][1] + dy / hpx]; calChanged(true); };
     new ResizeObserver(resize).observe(wrap);
-    const v = { warp, rez, draw, nudge, texUpdate() { t3.needsUpdate = true; draw(); }, setBuses(list) { buses = list; handles(); } };
+    const v = { warp, rez, draw, nudge, texUpdate() { t3.needsUpdate = true; draw(); }, setBuses(list) { buses = list; handles(); }, setTypical(list) { typ = list; handles(); } };
     views.push(v); return v;
   }
 
@@ -276,11 +292,13 @@
   const outs = new Set();
 
   // ---------------------------------------------------------------- town buses, moved from the timetable several times a second
-  let hadBuses = false;
+  let hadBuses = false, tyStep = null;
   setInterval(() => {
     const ks = S.follow ? S.kiosk : null, L = ks ? ks.layers : S.layers, on = !!(L && L.buses) && !S.test;
+    const tyOn = !!(L && L.traffic) && !(TR && TR.ok) && !S.test, c = BUS.clock(!!(ks && ks.busFast)), st = tyOn ? TY.step(c) + (c.fast ? 'f' : '') + c.day : null;
+    if (st !== tyStep) { tyStep = st; const list = tyOn ? MAIN.map(m => TY.level(m.c, m.d, c)) : null; views.forEach(v => v.setTypical(list)); }
     if (!on) { if (hadBuses) { views.forEach(v => v.setBuses([])); hadBuses = false; } return; }
-    const list = BUS.at(BUS.clock(!!(ks && ks.busFast))); views.forEach(v => v.setBuses(list)); hadBuses = true;
+    const list = BUS.at(c); views.forEach(v => v.setBuses(list)); hadBuses = true;
   }, 125);
 
   // ---------------------------------------------------------------- live traffic, fetched again every few minutes while it is on
@@ -340,7 +358,7 @@
   $('#follow').onchange = e => { S.follow = e.target.checked; changed(); showKiosk(); };
   $('#bright').oninput = e => { S.bright = +e.target.value / 100; changed(); };
   $('#resetPins').onclick = () => { const m = mode(), i = Math.min(edit, S.n - 1); S.rigs[m][i] = freshRig(m, i); calChanged(true); syncUI(); };
-  const LBL = { roads: 'Roads', water: 'Water today', areas: 'Census areas', zoning: 'Zoning', mon: 'Recorded monuments', scheme: 'Proposed river crossing', relief: 'Shaded relief', grid: 'Tile grid', opw: 'OPW flood maps', buses: 'Town buses (timetable)', traffic: 'Live traffic (TomTom)' };
+  const LBL = { roads: 'Roads', water: 'Water today', areas: 'Census areas', zoning: 'Zoning', mon: 'Recorded monuments', scheme: 'Proposed river crossing', relief: 'Shaded relief', grid: 'Tile grid', opw: 'OPW flood maps', buses: 'Town buses (timetable)', traffic: 'Traffic (live with a TomTom key, otherwise typical)' };
   $('#layers').innerHTML = Object.keys(S.layers).map(k2 => `<label class="row"><input type="checkbox" data-l="${k2}"> ${LBL[k2]}</label>`).join('');
   $('#layers').querySelectorAll('[data-l]').forEach(c => c.onchange = () => { S.layers[c.dataset.l] = c.checked; changed(); });
   const STEPS = {
@@ -380,7 +398,7 @@
   }
   function showTraffic() {
     const el = $('#ttState'); if (!el) return;
-    el.textContent = !TT.key() ? 'No key yet: traffic stays off.' : !TR ? 'Key saved. Traffic loads when the layer is on.' :
+    el.textContent = !TT.key() ? 'No key: the Traffic layer shows typical traffic (modelled, not live).' : !TR ? 'Key saved. Traffic loads when the layer is on.' :
       TR.ok ? `Working: ${TR.tiles.length} tiles, updated ${new Date(TR.when).toTimeString().slice(0, 5)}.` : 'Not working: ' + TT.why[TR.why] + '.';
   }
   $('#ttSave').onclick = () => { TT.setKey($('#ttKey').value); $('#ttKey').value = ''; B2.send({ t: 'tt-key' }); trB = -1; TR = null; trafficTick(true); showTraffic(); };
