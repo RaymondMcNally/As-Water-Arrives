@@ -399,9 +399,10 @@
   function showTraffic() {
     const el = $('#ttState'); if (!el) return;
     el.textContent = !TT.key() ? 'No key: the Traffic layer shows typical traffic (modelled, not live).' : !TR ? 'Key saved. Traffic loads when the layer is on.' :
-      TR.ok ? `Working: ${TR.tiles.length} tiles, updated ${new Date(TR.when).toTimeString().slice(0, 5)}.` : 'Not working: ' + TT.why[TR.why] + '.';
+      TR.ok ? `Working: ${TR.tiles.length} tiles, updated ${new Date(TR.when).toTimeString().slice(0, 5)}.` : 'Not working: ' + TT.why[TR.why] + (TR.status ? ` (HTTP ${TR.status})` : '') + '. Press Test key for TomTom\'s own message.';
   }
   $('#ttSave').onclick = () => { TT.setKey($('#ttKey').value); $('#ttKey').value = ''; B2.send({ t: 'tt-key' }); trB = -1; TR = null; trafficTick(true); showTraffic(); };
+  $('#ttTest').onclick = async () => { $('#ttState').textContent = 'Asking TomTom…'; const r = await TT.test(); $('#ttState').textContent = r.msg; if (r.ok) { B2.send({ t: 'tt-key' }); trB = -1; TR = null; trafficTick(true); } };
   $('#ttClear').onclick = () => { TT.setKey(''); B2.send({ t: 'tt-key' }); TR = null; compose(); showTraffic(); };
   compose(); syncUI(); showKiosk(); showTraffic();
   B2.send({ t: 'ping' }); B2.send({ t: 'want-kiosk' });

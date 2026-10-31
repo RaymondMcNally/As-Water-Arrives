@@ -5,7 +5,9 @@
    browser cache, and the free allowance (200,000 tiles a month) goes a long way: about 50 tiles every 5 minutes, some 6,000 in a 10-hour day. */
 (function () {
   'use strict';
-  const LS = 'aiarg-tomtom-key', REFRESH_MS = 5 * 60 * 1000, STYLE = 'relative0-dark', Z = 15;
+  const LS = 'aiarg-tomtom-key', LSS = 'aiarg-tomtom-style', REFRESH_MS = 5 * 60 * 1000, Z = 15;
+  const STYLES = ['relative0-dark', 'relative0', 'relative'];        // tried in turn if TomTom rejects a style
+  let STYLE = (() => { try { return localStorage.getItem(LSS) || STYLES[0]; } catch (e) { return STYLES[0]; } })();
   let cfgKey = '';
   const T = {
     REFRESH_MS, Z,
@@ -20,6 +22,23 @@
     lat2y: (lat, z) => { const r = lat * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 2 ** z; },
     x2lon: (x, z) => x / 2 ** z * 360 - 180,
     y2lat: (y, z) => { const n = Math.PI - 2 * Math.PI * y / 2 ** z; return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))); },
+    // fetch one tile over Lady Erin and say plainly what happened; finds a style TomTom accepts
+    async test() {
+      if (!T.key()) return { ok: false, msg: 'No key saved in this browser.' };
+      const z = Z, x = Math.floor(T.lon2x(-8.4757, z)), y = Math.floor(T.lat2y(54.2717, z));
+      let last = '';
+      for (const st of [STYLE, ...STYLES.filter(v => v !== STYLE)]) {
+        const u = `https://api.tomtom.com/traffic/map/4/tile/flow/${st}/${z}/${x}/${y}.png?key=${encodeURIComponent(T.key())}&tileSize=256&thickness=10&t=test${Date.now()}`;
+        let r;
+        try { r = await fetch(u, { cache: 'no-store', mode: 'cors' }); }
+        catch (e) { return { ok: false, msg: 'The browser could not read TomTom\'s reply (network blocked, offline, or TomTom not allowing this website). ' + e.message }; }
+        if (r.ok) { STYLE = st; try { localStorage.setItem(LSS, st); } catch (e) { } return { ok: true, msg: `TomTom accepted the key (style ${st}).` }; }
+        let body = ''; try { body = (await r.text()).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220); } catch (e) { }
+        last = `TomTom said HTTP ${r.status}${body ? ': ' + body : ''}`;
+        if (r.status === 401 || r.status === 403 || r.status === 429) break;  // the key, not the style
+      }
+      return { ok: false, msg: last };
+    },
     // download the tiles covering a lon/lat box. Returns { ok, when, tiles: [{ img, nw, ne, sw }] } with corners in ITM,
     // or { ok: false, why } (no key, refused, or the browser not allowed to read them)
     async load([w, s, e, n], z = Z) {
@@ -27,14 +46,14 @@
       const x0 = Math.floor(T.lon2x(w, z)), x1 = Math.floor(T.lon2x(e, z)), y0 = Math.floor(T.lat2y(n, z)), y1 = Math.floor(T.lat2y(s, z)), b = T.bucket(), jobs = [];
       for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) jobs.push((async () => {
         const r = await fetch(T.url(z, x, y, b), { cache: 'force-cache', mode: 'cors' });
-        if (!r.ok) throw new Error(r.status === 403 || r.status === 401 ? 'key' : 'http ' + r.status);
+        if (!r.ok) { const e = new Error(r.status === 403 || r.status === 401 ? 'key' : 'http'); e.status = r.status; throw e; }
         const img = await createImageBitmap(await r.blob()), c = (i, j) => AW.toITM(T.x2lon(x + i, z), T.y2lat(y + j, z));
         return { img, nw: c(0, 0), ne: c(1, 0), sw: c(0, 1) };
       })());
       try { return { ok: true, when: Date.now(), tiles: await Promise.all(jobs) }; }
-      catch (err) { return { ok: false, why: err.message === 'key' ? 'key' : 'net' }; }
+      catch (err) { return { ok: false, why: err.message === 'key' ? 'key' : err.message === 'http' ? 'http' : 'net', status: err.status }; }
     },
-    why: { nokey: 'needs a TomTom key (staff panel)', key: 'TomTom refused the key', net: 'TomTom could not be reached' },
+    why: { nokey: 'needs a TomTom key (staff panel)', key: 'TomTom refused the key', http: 'TomTom returned an error', net: 'the browser could not read TomTom\'s tiles' },
     legend: [['#3cb44b', 'Traffic flowing freely'], ['#ffb300', 'Traffic slow'], ['#e53935', 'Traffic queuing'], ['#7a1e1e', 'Traffic stopped']]
   };
   AW.traffic = T;

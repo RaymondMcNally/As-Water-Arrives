@@ -115,7 +115,7 @@
     } else if (ttB !== b) { map.getSource('traffic').setTiles([TT.template(b)]); ttB = b; }
     map.setLayoutProperty('traffic', 'visibility', 'visible');
   }
-  map.on('error', e => { if (e.sourceId === 'traffic' && !ttErr) { ttErr = 'TomTom did not load'; trafficTick(); legend(); } });
+  map.on('error', e => { if (e.sourceId === 'traffic' && !ttErr) { ttErr = 'TomTom did not load'; trafficTick(); legend(); TT.test().then(r => { $('#ttState').textContent = 'Live traffic is off: ' + r.msg; }); } });
   setInterval(trafficTick, 15000);
   map.addLayer({ id: 'out', type: 'fill', source: 'out', paint: { 'fill-color': '#050d10', 'fill-opacity': .9 } });
   map.addLayer({ id: 'ring', type: 'line', source: 'ring', paint: { 'line-color': '#f0a54a', 'line-width': 1.6, 'line-dasharray': [3, 2] } });
@@ -166,7 +166,7 @@
     if (litA.size) L.push([C.match, 'Census areas that match']);
     if (K.layers.areas) areaColours(D.A, K.areaKey).legend.forEach(x => L.push(x));
     if (K.layers.scheme) L.push([C.scheme, 'Proposed Garavogue crossing']);
-    if (K.layers.traffic) (live() ? TT.legend : TY.legend).forEach(x => L.push(x));
+    if (K.layers.traffic) { (live() ? TT.legend : TY.legend).forEach(x => L.push(x)); if (TT.key() && ttErr) L.push(['#555', 'Live TomTom data did not load (see staff panel)']); }
     if (K.layers.buses) BUS.routes.forEach(r => L.push([r.col, `Bus ${r.id}: ${r.name.replace(/ - /g, ' – ')}`]));
     $('#legend').innerHTML = L.map(([c, t]) => `<div><i style="background:${c}"></i>${esc(t)}</div>`).join('') + (K.layers.buses ? '<div class="k-busclock" id="busClock"></div>' : '') + (K.layers.traffic ? (live() ? '<div class="k-busclock">Traffic © TomTom, live, updated every 5 minutes</div>' : '<div class="k-busclock" id="typClock"></div>') : '');
     tyStep = null;
@@ -349,6 +349,8 @@
   $('#pinCancel').onclick = () => { $('#pinModal').hidden = true; };
   $('#staffBack').onclick = () => { $('#staffModal').hidden = true; };
   $('#openProj').onclick = () => { if (!outs.has(0)) window.open('project.html?out', 'aiarg-projector', 'popup,width=1280,height=800'); if (nProj() === 2 && !outs.has(1)) window.open('project.html?out=2', 'aiarg-projector-2', 'popup,left=80,top=80,width=1280,height=800'); };
+  const ttReset = () => { ttErr = ''; ttB = -1; if (map.getLayer('traffic')) map.removeLayer('traffic'); if (map.getSource('traffic')) map.removeSource('traffic'); showLayers(); };
+  $('#ttTest').onclick = async () => { $('#ttState').textContent = 'Asking TomTom…'; const r = await TT.test(); $('#ttState').textContent = r.msg; if (r.ok) { ttReset(); P.send({ t: 'tt-key' }); } };
   $('#ttSave').onclick = () => { TT.setKey($('#ttKey').value); $('#ttKey').value = ''; ttErr = ''; ttB = -1; if (map.getSource('traffic')) { map.removeLayer('traffic'); map.removeSource('traffic'); } P.send({ t: 'tt-key' }); showLayers(); $('#ttState').textContent = TT.key() ? 'Key saved in this browser.' : 'Key removed.'; };
   $('#goCal').onclick = () => window.open('project.html', 'aiarg-projection');
   $('#full').onclick = () => document.documentElement.requestFullscreen?.().catch(() => { });
