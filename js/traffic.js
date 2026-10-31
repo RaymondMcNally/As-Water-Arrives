@@ -13,7 +13,7 @@
     REFRESH_MS, Z,
     key() { try { return localStorage.getItem(LS) || cfgKey; } catch (e) { return cfgKey; } },
     // accept a pasted key with stray bits around it: quotes, key=, apiKey:, commas, spaces
-    clean(k) { k = (k || '').trim().replace(/^.*?(?:key|apikey|api_key)\s*[=:]\s*/i, '').replace(/[\s"'`;,)&]+.*$/, '').replace(/^["'`]+/, ''); return k; },
+    clean(k) { k = (k || '').trim().replace(/^.*?(?:key|apikey|api_key)\s*[=:]\s*/i, '').replace(/^["'`\s]+/, '').replace(/[\s"'`;,)&]+.*$/, ''); return k; },
     setKey(k) { k = T.clean(k); try { k ? localStorage.setItem(LS, k) : localStorage.removeItem(LS); } catch (e) { } return k; },
     // a safe description of the saved key: its length and first four characters
     describe() { const k = T.key(); if (!k) return 'no key saved'; const ok = /^[A-Za-z0-9]{32}$/.test(k); return `saved key: ${k.length} characters, starts ${k.slice(0, 4)}…${ok ? '' : k.startsWith('eyJ') ? ' (this looks like a Cesium ion token, not a TomTom key)' : ' (TomTom keys are 32 letters and numbers)'}`; },
