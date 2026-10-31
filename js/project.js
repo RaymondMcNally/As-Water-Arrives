@@ -55,7 +55,7 @@
     rigs: {},                               // per set-up: [{ h, nx, ny, pins }] lens height (mm), lens offset from Lady Erin (mm, +east/+north), pins (screen 0–1)
     base: 9, datum: -3, vex: 1,             // how the tiles were printed: base slab (mm), datum (m OD) and ground exaggeration
     cal: false, test: false, follow: true, bright: 1,
-    layers: { roads: true, water: true, areas: false, zoning: false, mon: false, scheme: false, relief: false, grid: false, opw: false, buses: false },
+    layers: { roads: true, water: true, areas: false, zoning: false, mon: false, scheme: false, relief: false, grid: false, opw: false, buses: false, traffic: false },
     kiosk: null                             // last state from the kiosk
   };
   let edit = 0;                             // the projector the control page is calibrating
@@ -85,6 +85,9 @@
   const OPW = (await getJSON('data/opw_flood.json')).features.map(f => ({ g: itm(f.geometry), p: { src: 'opw', level: f.properties.aep } }));
   OPW.forEach(o => F.push(o));
   const BUS = await AW.buses();
+  const TT = AW.traffic; getJSON('exhibition/config.json').then(c => TT.setConfigKey(c.tomtomKey)).catch(() => { });
+  const CIRC = MJ.circle.coordinates[0], TBOX = [Math.min(...CIRC.map(c => c[0])), Math.min(...CIRC.map(c => c[1])), Math.max(...CIRC.map(c => c[0])), Math.max(...CIRC.map(c => c[1]))];
+  let TR = null, trB = -1, trBusy = false;                               // the last traffic download and its refresh bucket
   const HS = await new Promise(r => { const im = new Image(); im.onload = () => r(im); im.onerror = () => r(null); im.src = 'data/hillshade.png'; });
 
   // ---------------------------------------------------------------- the texture: north up, the 4.1 km square
@@ -111,7 +114,16 @@
       const fl = ks && ks.flood;
       if (L.opw) [1, 5, 10].forEach(a => { const o = OPW.find(x => x.p.level === a); if (o) fill(o.g, Q.C.opwBands[a], .95); });
       if (fl) { const f = F.find(x => x.p.src === fl.src && x.p.level === fl.level); if (f) { fill(f.g, fl.src === 'sea' ? '#3fa9f5' : fl.src === 'lake' ? '#36c6d3' : Q.C.opw, .95); tx.strokeStyle = '#d8f1ff'; tx.lineWidth = 3; tx.beginPath(); path(f.g); tx.stroke(); } }
-      if (L.roads) { tx.strokeStyle = '#ffffff'; tx.lineCap = 'round'; tx.lineJoin = 'round'; RD.forEach(r => { const w = RW[r.c]; if (!w) return; tx.lineWidth = w * k; tx.beginPath(); path(r.g); tx.stroke(); }); }
+      const trOn = L.traffic && TR && TR.ok;
+      if (L.roads) { tx.globalAlpha = trOn ? .35 : 1; tx.strokeStyle = '#ffffff'; tx.lineCap = 'round'; tx.lineJoin = 'round'; RD.forEach(r => { const w = RW[r.c]; if (!w) return; tx.lineWidth = w * k; tx.beginPath(); path(r.g); tx.stroke(); }); tx.globalAlpha = 1; }
+      if (trOn) {                                                        // TomTom tiles, each placed by three of its corners
+        tx.imageSmoothingEnabled = true;
+        TR.tiles.forEach(t => {
+          const [ax, ay] = P(...t.nw), [bx, by] = P(...t.ne), [cx2, cy2] = P(...t.sw);
+          tx.setTransform((bx - ax) / 256, (by - ay) / 256, (cx2 - ax) / 256, (cy2 - ay) / 256, ax, ay); tx.drawImage(t.img, 0, 0, 256, 256);
+        });
+        tx.setTransform(1, 0, 0, 1, 0, 0);
+      }
       if (ks && ks.sel && ks.sel.ids && ks.sel.ids.length) {
         if (ks.sel.tgt === 'b') ks.sel.ids.forEach(i => { const g = B[i]; if (!g) return; fill(g, Q.C.match); tx.strokeStyle = Q.C.match; tx.lineWidth = 2.5; tx.beginPath(); path(g); tx.stroke(); });
         else ks.sel.ids.forEach(i => { const a = A[i]; if (!a) return; fill(a.g, Q.C.match, .45); tx.strokeStyle = Q.C.match; tx.lineWidth = 5; tx.beginPath(); path(a.g); tx.stroke(); });
@@ -252,9 +264,10 @@
   const SHARED = ['n', 'split', 'blend', 'seam', 'gamma', 'rigs', 'base', 'datum', 'vex', 'cal', 'test', 'follow', 'bright', 'layers'];
   const share = () => { const o = {}; SHARED.forEach(k2 => { o[k2] = S[k2]; }); return o; };
   function calChanged(final) { views.forEach(v => v.warp()); if (final) save(); clearTimeout(syncT); syncT = setTimeout(() => B2.send({ t: 'proj', s: share() }), final ? 0 : 30); if (!OUT) showCal(); }
-  function changed(geo) { save(); if (geo) views.forEach(v => v.rez()); else views.forEach(v => v.warp()); compose(); B2.send({ t: 'proj', s: share() }); if (!OUT) syncUI(); }
+  function changed(geo) { setTimeout(trafficTick, 0); save(); if (geo) views.forEach(v => v.rez()); else views.forEach(v => v.warp()); compose(); B2.send({ t: 'proj', s: share() }); if (!OUT) syncUI(); }
   function onMsg(m) {
-    if (m.t === 'kiosk') { S.kiosk = m.s; save(); compose(); if (!OUT) showKiosk(true); }
+    if (m.t === 'kiosk') { S.kiosk = m.s; save(); compose(); trafficTick(); if (!OUT) showKiosk(true); }
+    else if (m.t === 'tt-key') { trB = -1; trafficTick(true); if (!OUT) showTraffic(); }
     else if (m.t === 'proj') { const geo = m.s.base !== S.base || m.s.datum !== S.datum || m.s.vex !== S.vex; Object.assign(S, m.s); ensure(); if (OUT) save(); if (geo) views.forEach(v => v.rez()); else views.forEach(v => v.warp()); compose(); if (!OUT) syncUI(); }
     else if (m.t === 'ping' && OUT) B2.send({ t: 'hello', who: 'out', i: ME });
     else if (m.t === 'hello' && m.who === 'out' && !OUT) { outs.add(m.i || 0); link(); B2.send({ t: 'proj', s: share() }); }
@@ -269,6 +282,16 @@
     if (!on) { if (hadBuses) { views.forEach(v => v.setBuses([])); hadBuses = false; } return; }
     const list = BUS.at(BUS.clock(!!(ks && ks.busFast))); views.forEach(v => v.setBuses(list)); hadBuses = true;
   }, 125);
+
+  // ---------------------------------------------------------------- live traffic, fetched again every few minutes while it is on
+  async function trafficTick(force) {
+    const ks = S.follow ? S.kiosk : null, L = ks ? ks.layers : S.layers;
+    if (!(L && L.traffic) || trBusy || (!force && trB === TT.bucket())) return;
+    trBusy = true; trB = TT.bucket();
+    try { TR = await TT.load(TBOX); } finally { trBusy = false; }
+    compose(); if (!OUT) showTraffic();
+  }
+  setInterval(trafficTick, 5000);
 
   // ---------------------------------------------------------------- projector window
   function keys(e, v) {
@@ -317,7 +340,7 @@
   $('#follow').onchange = e => { S.follow = e.target.checked; changed(); showKiosk(); };
   $('#bright').oninput = e => { S.bright = +e.target.value / 100; changed(); };
   $('#resetPins').onclick = () => { const m = mode(), i = Math.min(edit, S.n - 1); S.rigs[m][i] = freshRig(m, i); calChanged(true); syncUI(); };
-  const LBL = { roads: 'Roads', water: 'Water today', areas: 'Census areas', zoning: 'Zoning', mon: 'Recorded monuments', scheme: 'Proposed river crossing', relief: 'Shaded relief', grid: 'Tile grid', opw: 'OPW flood maps', buses: 'Town buses (timetable)' };
+  const LBL = { roads: 'Roads', water: 'Water today', areas: 'Census areas', zoning: 'Zoning', mon: 'Recorded monuments', scheme: 'Proposed river crossing', relief: 'Shaded relief', grid: 'Tile grid', opw: 'OPW flood maps', buses: 'Town buses (timetable)', traffic: 'Live traffic (TomTom)' };
   $('#layers').innerHTML = Object.keys(S.layers).map(k2 => `<label class="row"><input type="checkbox" data-l="${k2}"> ${LBL[k2]}</label>`).join('');
   $('#layers').querySelectorAll('[data-l]').forEach(c => c.onchange = () => { S.layers[c.dataset.l] = c.checked; changed(); });
   const STEPS = {
@@ -355,6 +378,13 @@
     $('#kioskState').innerHTML = !k2 ? 'No message from the kiosk yet. Open <a href="kiosk.html" target="_blank">kiosk.html</a> in this browser.' :
       `${live ? '<b>Live:</b> ' : 'Last: '}${k2.flood ? (k2.flood.src === 'opw' ? `OPW river flood map, ${k2.flood.level}% a year · ` : `${k2.flood.src === 'sea' ? 'sea' : 'Lough Gill'} at ${fmtN(k2.flood.level, 1)} m OD · `) : ''}${fmtN(k2.sel?.ids?.length || 0)} ${k2.sel?.tgt === 'a' ? 'census areas' : 'buildings'} lit`;
   }
-  compose(); syncUI(); showKiosk();
+  function showTraffic() {
+    const el = $('#ttState'); if (!el) return;
+    el.textContent = !TT.key() ? 'No key yet: traffic stays off.' : !TR ? 'Key saved. Traffic loads when the layer is on.' :
+      TR.ok ? `Working: ${TR.tiles.length} tiles, updated ${new Date(TR.when).toTimeString().slice(0, 5)}.` : 'Not working: ' + TT.why[TR.why] + '.';
+  }
+  $('#ttSave').onclick = () => { TT.setKey($('#ttKey').value); $('#ttKey').value = ''; B2.send({ t: 'tt-key' }); trB = -1; TR = null; trafficTick(true); showTraffic(); };
+  $('#ttClear').onclick = () => { TT.setKey(''); B2.send({ t: 'tt-key' }); TR = null; compose(); showTraffic(); };
+  compose(); syncUI(); showKiosk(); showTraffic();
   B2.send({ t: 'ping' }); B2.send({ t: 'want-kiosk' });
 })().catch(e => { console.error(e); const el = document.getElementById('err'); if (el) { el.hidden = false; el.textContent = 'The projection page could not start: ' + e.message; } });

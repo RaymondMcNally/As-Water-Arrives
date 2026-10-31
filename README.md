@@ -20,6 +20,9 @@ The kiosk, the projection page and the projector windows must be open in the **s
 ## Before making this public
 `data/buildings.json` and `data/model/buildings.json` contain building footprints derived from **Tailte Éireann (OSi)** data. Check that your licence allows publishing them on a public website. If it doesn't, keep the repository private and serve the site locally at the exhibition, or switch the footprints to OpenStreetMap buildings.
 
+## Live traffic
+The **Live traffic** layer uses TomTom raster flow tiles. Get a free key at developer.tomtom.com and paste it into the kiosk staff panel or the Projection page: it is stored in that browser profile only. (A `tomtomKey` in `exhibition/config.json` also works, but that file is public on GitHub Pages.) About 50 tiles are fetched every 5 minutes while the layer is on, roughly 6,000 in a 10-hour day, inside TomTom's free 200,000 tiles a month.
+
 ## Data
 Built by `tools/make_data.py` from the God's Eye public data and the tile-generator outputs (see `tools/`). The town buses come from the Bus Éireann GTFS timetable via `tools/make_buses.py` (rerun it with a new feed when the timetable changes). Credits: Bus Éireann timetable data from the National Transport Authority; contains Irish Public Sector Data (OPW lidar, waterlevel.ie) licensed under CC BY 4.0; © OpenStreetMap contributors (ODbL); CSO Census 2022; SEAI BER; GeoDirectory; Sligo & Environs Development Plan; Tailte Éireann. Deprivation scores are reconstructed from the Pobal HP method and are not official.
 

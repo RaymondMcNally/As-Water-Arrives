@@ -42,6 +42,9 @@ A **West / east** layout is also available, with both projectors turned 90° so 
 
 **One projector:** choose **One** under Projectors. The lens must then be about 3.6 m above the table to cover the whole model, and the pins are **N, E, S, W**.
 
+## Live traffic
+Get a free API key from developer.tomtom.com. At the kiosk, open the staff panel (hold the dot, enter the PIN), paste the key under **TomTom API key** and press **Save key**. It is kept in this browser profile only. The traffic layer is then under **03 On the model › Live traffic**.
+
 ## Staff
 - **Staff panel:** hold the bottom-right dot for 3 s, then enter the PIN (`staffPin` in `config.json`, `1234` to start). The PIN only keeps visitors out of the set-up: it sits in a public file, so it is not security.
 - **Staff panel buttons:** open the projector windows (both, when the Projection page is set to two), calibrate, go full screen, reset the kiosk, or leave exhibition mode.

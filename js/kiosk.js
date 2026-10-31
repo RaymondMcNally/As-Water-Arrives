@@ -30,7 +30,8 @@
     { id: 'relief', n: 'Shaded relief', s: 'Light on the hills', col: '#8a9a9c', on: false },
     { id: 'grid', n: 'Tile grid', s: 'The 52 printed tiles', col: '#f0a54a', on: false },
     { id: 'opw', n: 'OPW flood maps', s: 'River: 1 in 10, 20 and 100 years', col: '#8f86ff', on: false },
-    { id: 'buses', n: 'Town buses', s: 'S1, S2 and S3, from the timetable', col: '#ff4f7b', on: false }
+    { id: 'buses', n: 'Town buses', s: 'S1, S2 and S3, from the timetable', col: '#ff4f7b', on: false },
+    { id: 'traffic', n: 'Live traffic', s: 'TomTom: roads by speed', col: '#e53935', on: false }
   ];
   const DEF = () => ({ tab: 'water', src: 'sea', level: 3.0, flood: true, preset: -1, query: null, layers: Object.fromEntries(LAYERS.map(l => [l.id, l.on])), areaKey: 'pct_ber_e_to_g', busFast: false });
   let K = DEF(), touched = false, lastTouch = Date.now();
@@ -40,6 +41,7 @@
   const nProj = () => { try { return (JSON.parse(localStorage.getItem('aiarg-projector-v2') || '{}').n) === 2 ? 2 : 1; } catch (e) { return 1; } };
 
   const BUS = await AW.buses();
+  const TT = AW.traffic; TT.setConfigKey(cfg.tomtomKey); let ttB = -1, ttErr = '';
 
   // ---------------------------------------------------------------- map
   boot('Drawing the map…');
@@ -88,6 +90,18 @@
   map.addSource('bus', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
   map.addLayer({ id: 'bus-lines', type: 'line', source: 'bus-lines', layout: { visibility: 'none', 'line-join': 'round' }, paint: { 'line-color': ['get', 'col'], 'line-width': 1.6, 'line-opacity': .45 } });
   map.addLayer({ id: 'bus', type: 'circle', source: 'bus', layout: { visibility: 'none' }, paint: { 'circle-radius': 5.5, 'circle-color': ['get', 'col'], 'circle-stroke-color': '#050d10', 'circle-stroke-width': 1.5 } });
+  // live traffic: TomTom raster tiles over the roads, refreshed every few minutes while the layer is on
+  function trafficTick() {
+    const on = K.layers.traffic && !!TT.key(), b = TT.bucket();
+    if (!on) { if (map.getLayer('traffic')) map.setLayoutProperty('traffic', 'visibility', 'none'); return; }
+    if (!map.getSource('traffic')) {
+      map.addSource('traffic', { type: 'raster', tiles: [TT.template(b)], tileSize: 256, minzoom: 12, maxzoom: 15, attribution: '© TomTom' });
+      map.addLayer({ id: 'traffic', type: 'raster', source: 'traffic', paint: { 'raster-opacity': .95 } }, 'b'); ttB = b;
+    } else if (ttB !== b) { map.getSource('traffic').setTiles([TT.template(b)]); ttB = b; }
+    map.setLayoutProperty('traffic', 'visibility', 'visible');
+  }
+  map.on('error', e => { if (e.sourceId === 'traffic' && !ttErr) { ttErr = 'TomTom traffic did not load: check the key in the staff panel'; legend(); } });
+  setInterval(trafficTick, 15000);
   map.addLayer({ id: 'out', type: 'fill', source: 'out', paint: { 'fill-color': '#050d10', 'fill-opacity': .9 } });
   map.addLayer({ id: 'ring', type: 'line', source: 'ring', paint: { 'line-color': '#f0a54a', 'line-width': 1.6, 'line-dasharray': [3, 2] } });
 
@@ -124,7 +138,7 @@
     const vis = (id, on) => map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
     vis('roads', K.layers.roads); vis('water', K.layers.water); vis('zoning', K.layers.zoning); vis('mon', K.layers.mon);
     vis('scheme', K.layers.scheme); vis('opw', K.layers.opw); vis('tiles', K.layers.grid); vis('hs', true); map.setPaintProperty('hs', 'raster-opacity', K.layers.relief ? .8 : .45);
-    vis('area-fill', K.layers.areas); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses; busTick();
+    vis('area-fill', K.layers.areas); trafficTick(); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses; busTick();
     if (K.layers.areas) { const cm = areaColours(D.A, K.areaKey), pairs = []; D.A.forEach(a => { const c = cm.get(a.properties[K.areaKey]); if (c) pairs.push(a.properties.sa_pub2022, c); });
       map.setPaintProperty('area-fill', 'fill-color', pairs.length ? ['match', ['get', 'sa_pub2022'], ...pairs, 'rgba(0,0,0,0)'] : 'rgba(0,0,0,0)'); }
     legend();
@@ -137,8 +151,9 @@
     if (litA.size) L.push([C.match, 'Census areas that match']);
     if (K.layers.areas) areaColours(D.A, K.areaKey).legend.forEach(x => L.push(x));
     if (K.layers.scheme) L.push([C.scheme, 'Proposed Garavogue crossing']);
+    if (K.layers.traffic) { if (!TT.key()) L.push(['#555', 'Live traffic ' + TT.why.nokey]); else if (ttErr) L.push(['#555', ttErr]); else TT.legend.forEach(x => L.push(x)); }
     if (K.layers.buses) BUS.routes.forEach(r => L.push([r.col, `Bus ${r.id}: ${r.name.replace(/ - /g, ' – ')}`]));
-    $('#legend').innerHTML = L.map(([c, t]) => `<div><i style="background:${c}"></i>${esc(t)}</div>`).join('') + (K.layers.buses ? '<div class="k-busclock" id="busClock"></div>' : '');
+    $('#legend').innerHTML = L.map(([c, t]) => `<div><i style="background:${c}"></i>${esc(t)}</div>`).join('') + (K.layers.buses ? '<div class="k-busclock" id="busClock"></div>' : '') + (K.layers.traffic && TT.key() && !ttErr ? '<div class="k-busclock">Traffic © TomTom, live, updated every 5 minutes</div>' : '');
     busTick();
   }
 
@@ -317,6 +332,7 @@
   $('#pinCancel').onclick = () => { $('#pinModal').hidden = true; };
   $('#staffBack').onclick = () => { $('#staffModal').hidden = true; };
   $('#openProj').onclick = () => { if (!outs.has(0)) window.open('project.html?out', 'aiarg-projector', 'popup,width=1280,height=800'); if (nProj() === 2 && !outs.has(1)) window.open('project.html?out=2', 'aiarg-projector-2', 'popup,left=80,top=80,width=1280,height=800'); };
+  $('#ttSave').onclick = () => { TT.setKey($('#ttKey').value); $('#ttKey').value = ''; ttErr = ''; ttB = -1; if (map.getSource('traffic')) { map.removeLayer('traffic'); map.removeSource('traffic'); } P.send({ t: 'tt-key' }); showLayers(); $('#ttState').textContent = TT.key() ? 'Key saved in this browser.' : 'Key removed.'; };
   $('#goCal').onclick = () => window.open('project.html', 'aiarg-projection');
   $('#full').onclick = () => document.documentElement.requestFullscreen?.().catch(() => { });
   $('#resetNow').onclick = () => { $('#staffModal').hidden = true; reset(); };
