@@ -1,5 +1,5 @@
 /* Kiosk for the A-IARG 2027 Sligo model. Visitors raise water, ask questions of the town and switch map layers;
-   everything they choose is sent to the projector window (project.html?out) over a BroadcastChannel. */
+   everything they choose is sent to the projector windows (project.html?out and ?out=2) over a BroadcastChannel. */
 (async function () {
   'use strict';
   const { $, esc, fmtN, toITM, fromITM, getJSON, bus } = AW;
@@ -35,7 +35,8 @@
   let K = DEF(), touched = false, lastTouch = Date.now();
   let litB = new Set(), litA = new Set(), ready = false;
   const P = bus(m => { if (ready) onMsg(m); });
-  let projOn = false;
+  const outs = new Set();                                   // projector windows open (0 = projector 1, 1 = projector 2)
+  const nProj = () => { try { return (JSON.parse(localStorage.getItem('aiarg-projector-v2') || '{}').n) === 2 ? 2 : 1; } catch (e) { return 1; } };
 
   // ---------------------------------------------------------------- map
   boot('Drawing the map…');
@@ -267,11 +268,17 @@
     P.send({ t: 'kiosk', s: { flood: K.flood ? { src: K.src, level: K.level } : null, sel: { tgt: litA.size ? 'a' : 'b', ids: litA.size ? [...litA] : [...litB] }, layers: K.layers, areaKey: K.areaKey } });
   }
   function onMsg(m) {
-    if (m.t === 'hello' && m.who === 'out') { projOn = true; link(); sendState(); }
-    if (m.t === 'bye' && m.who === 'out') { projOn = false; link(); }
+    if (m.t === 'hello' && m.who === 'out') { outs.add(m.i || 0); link(); sendState(); }
+    if (m.t === 'bye' && m.who === 'out') { outs.delete(m.i || 0); link(); }
     if (m.t === 'want-kiosk') sendState();
   }
-  function link() { const el = $('#projLink'); el.textContent = projOn ? 'Projector: connected' : 'Projector: not connected'; el.dataset.on = projOn ? '1' : '0'; $('#staffStatus').textContent = projOn ? 'The projector window is open and following the kiosk.' : 'No projector window is open in this browser. Open it, drag it to the projector and press F.'; }
+  function link() {
+    const n = nProj(), have = [...outs].filter(i => i < n).length, el = $('#projLink');
+    el.textContent = n === 1 ? (have ? 'Projector: connected' : 'Projector: not connected') : `Projectors: ${have} of 2 connected`; el.dataset.on = have === n ? '1' : '0';
+    $('#staffStatus').textContent = have === n ? (n === 1 ? 'The projector window is open and following the kiosk.' : 'Both projector windows are open and following the kiosk.')
+      : n === 1 ? 'No projector window is open in this browser. Open it, drag it to the projector and press F.'
+      : `${have} of 2 projector windows are open. Open them, drag each to its projector and press F in each.`;
+  }
   P.send({ t: 'ping' });
 
   // ---------------------------------------------------------------- staff exit and idle reset
@@ -289,7 +296,7 @@
   });
   $('#pinCancel').onclick = () => { $('#pinModal').hidden = true; };
   $('#staffBack').onclick = () => { $('#staffModal').hidden = true; };
-  $('#openProj').onclick = () => window.open('project.html?out', 'aiarg-projector', 'popup,width=1280,height=800');
+  $('#openProj').onclick = () => { if (!outs.has(0)) window.open('project.html?out', 'aiarg-projector', 'popup,width=1280,height=800'); if (nProj() === 2 && !outs.has(1)) window.open('project.html?out=2', 'aiarg-projector-2', 'popup,left=80,top=80,width=1280,height=800'); };
   $('#goCal').onclick = () => window.open('project.html', 'aiarg-projection');
   $('#full').onclick = () => document.documentElement.requestFullscreen?.().catch(() => { });
   $('#resetNow').onclick = () => { $('#staffModal').hidden = true; reset(); };

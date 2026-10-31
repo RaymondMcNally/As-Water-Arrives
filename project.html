@@ -28,10 +28,11 @@
         <div class="pj-preview" id="pvWrap"><canvas id="pv" aria-label="Preview of the projector image"></canvas><canvas id="pvOv" aria-hidden="true"></canvas></div>
         <div class="row pj-bar">
           <button type="button" class="btn primary" id="openOut">Open projector window</button>
+          <button type="button" class="btn primary" id="openOut2" data-two hidden>Open projector 2 window</button>
           <button type="button" class="btn" id="fullHere">Full screen here</button>
           <span class="pj-link" id="link">No projector window yet</span>
         </div>
-        <p class="note">Keys in either window: <b>F</b> full screen · <b>C</b> calibration on or off · arrow keys nudge the selected pin (Shift = 10 px).</p>
+        <p class="note">Keys in either window: <b>F</b> full screen · <b>C</b> calibration on or off · arrow keys nudge the selected pin (Shift = 10 px) · <b>1</b> / <b>2</b> choose the projector to calibrate.</p>
       </div>
 
       <aside class="panel">
@@ -42,21 +43,39 @@
           <p class="note">When on, the projector shows whatever visitors choose at the kiosk. Turn it off to pick layers here.</p>
         </div>
         <div class="grp">
+          <h3>Projectors</h3>
+          <div class="seg" id="nProj" role="group" aria-label="How many projectors"><button type="button" data-v="1">One</button><button type="button" data-v="2">Two</button></div>
+          <div data-two hidden>
+            <p class="note" style="margin:10px 0 6px">How the two share the model</p>
+            <div class="seg" id="split" role="group" aria-label="How the two projectors share the model"><button type="button" data-v="ns">North / south halves</button><button type="button" data-v="ew">West / east halves</button></div>
+          </div>
+        </div>
+        <div class="grp">
           <h3>Calibrate</h3>
-          <label class="row"><input type="checkbox" id="cal"> Show pins, rim and tile seams</label>
-          <ol class="note steps">
-            <li>Hang the projector pointing straight down over Lady Erin, the centre of the model.</li>
-            <li>Drag the four pins <b>N, E, S, W</b> onto the points where the round model meets the table.</li>
-            <li>Measure the lens height above the table. If the red centre cross misses Lady Erin, adjust the offsets.</li>
-          </ol>
+          <label class="row"><input type="checkbox" id="cal"> Show pins, rim, tile seams and the blend band</label>
+          <ol class="note steps" id="steps"></ol>
+          <div data-two hidden>
+            <div class="seg" id="editP" role="group" aria-label="Projector to calibrate" style="margin:10px 0"><button type="button" data-v="0">Projector 1</button><button type="button" data-v="1">Projector 2</button></div>
+          </div>
+          <p class="note"><b id="calWho">The projector</b></p>
           <div class="pj-two">
-            <label>Lens height above the table (mm)<input type="number" id="h" step="10" min="400" max="4000"></label>
-            <label>Projector offset east (mm)<input type="number" id="nx" step="5"></label>
-            <label>Projector offset north (mm)<input type="number" id="ny" step="5"></label>
+            <label>Lens height above the table (mm)<input type="number" id="h" step="10" min="400" max="5000"></label>
+            <label>Lens offset east of Lady Erin (mm)<input type="number" id="nx" step="5"></label>
+            <label>Lens offset north of Lady Erin (mm)<input type="number" id="ny" step="5"></label>
             <label>Brightness<input type="range" id="bright" min="30" max="100"></label>
           </div>
           <p class="note mono" id="pinsOut"></p>
-          <button type="button" class="btn sm" id="resetPins">Reset the pins</button>
+          <button type="button" class="btn sm" id="resetPins">Reset these pins</button>
+        </div>
+        <div class="grp" data-two hidden>
+          <h3>Blend the two images</h3>
+          <div class="pj-two">
+            <label>Blend band width (mm)<input type="number" id="blend" step="10" min="20" max="500"></label>
+            <label id="seamLbl">Seam, mm north of Lady Erin<input type="number" id="seam" step="5" min="-200" max="200"></label>
+            <label>Projector gamma<input type="number" id="gamma" step=".1" min="1" max="3"></label>
+          </div>
+          <label class="row" style="margin-top:8px"><input type="checkbox" id="test"> White test (the whole model lit white)</label>
+          <p class="note">In the band between the dashed lines each projector fades out as the other fades in. If the band looks brighter than the rest, raise the gamma; if it looks darker, lower it. The band must lie where both pictures overlap.</p>
         </div>
         <div class="grp">
           <h3>How the tiles were printed</h3>
@@ -76,7 +95,7 @@
   </div>
 </main>
 
-<div class="pj-out" id="outStage" hidden><canvas id="out"></canvas><canvas id="outOv"></canvas><div class="pj-hint">F full screen · C calibration</div></div>
+<div class="pj-out" id="outStage" hidden><canvas id="out"></canvas><canvas id="outOv"></canvas><div class="pj-hint" id="outHint">F full screen · C calibration</div></div>
 
 <footer class="foot"><div class="wrap"><span>As Water Arrives · 16th A-IARG conference · ATU Sligo, 11–12 March 2027</span><span>Created by R McNally</span></div></footer>
 <script src="vendor/three.min.js"></script>

@@ -1,12 +1,12 @@
 # As Water Arrives · Sligo borough model
 
-The website for the round 1:2500 model of Sligo made for the **16th A-IARG conference, "As Water Arrives: Architecture and Change"** (ATU Sligo, 11–12 March 2027). The model shows Sligo one Irish mile (2,048 m) out from the Lady Erin monument on Market Street: 52 tiles of 230 mm printed on a Bambu P1S, with a projector over them.
+The website for the round 1:2500 model of Sligo made for the **16th A-IARG conference, "As Water Arrives: Architecture and Change"** (ATU Sligo, 11–12 March 2027). The model shows Sligo one Irish mile (2,048 m) out from the Lady Erin monument on Market Street: 52 tiles of 230 mm printed on a Bambu P1S, with one or two projectors over them.
 
 | Page | What it does |
 |---|---|
 | `index.html` | The model and the conference theme |
 | `kiosk.html` | The public touch screen. **01 Water arrives** raises the sea or Lough Gill; **02 Ask the town** has water questions first, then the Sligo God's Eye questions; **03 On the model** switches the projected layers; **04 About**. Everything chosen is sent to the projector. |
-| `project.html` | Projector calibration and preview; `project.html?out` is the projector window |
+| `project.html` | Projector calibration and preview, for one or two projectors; `project.html?out` and `project.html?out=2` are the projector windows. With two, each covers half the model and the two are blended across the middle |
 | `model.html` | Make a model: drag a square and download a 3D-print tile (3MF, made in the browser with manifold-3d, the same method as the exhibition tiles), a laser contour kit (SVG/DXF sheets) or a contour map (PDF/SVG) |
 | `data.html` | Sources, method and files (including the OPW river flood maps for Sligo, 10%, 5% and 1% a year) |
 
@@ -15,7 +15,7 @@ Set-up for the conference (displays, calibration, staff exit, PIN): **[exhibitio
 ## Publishing
 GitHub Pages: Settings › Pages › Deploy from branch › `main` / root. No build step; every library is in `vendor/`, so the site also runs from a college web server or `python3 -m http.server` (it must be served over http, not opened from disk).
 
-The kiosk, the projection page and the projector window must be open in the **same browser profile on the same computer**: they talk over a BroadcastChannel (`aiarg-sligo-model`). The projector calibration is kept in that profile's localStorage.
+The kiosk, the projection page and the projector windows must be open in the **same browser profile on the same computer**: they talk over a BroadcastChannel (`aiarg-sligo-model`). The projector calibration is kept in that profile's localStorage.
 
 ## Before making this public
 `data/buildings.json` and `data/model/buildings.json` contain building footprints derived from **Tailte Éireann (OSi)** data. Check that your licence allows publishing them on a public website. If it doesn't, keep the repository private and serve the site locally at the exhibition, or switch the footprints to OpenStreetMap buildings.
