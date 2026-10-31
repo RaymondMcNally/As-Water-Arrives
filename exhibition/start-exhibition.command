@@ -4,7 +4,7 @@
 # Set SITE to the website's address and the X positions to where each display starts (System Settings > Displays > Arrange).
 # The first time, right-click this file and choose Open. If a window lands on the wrong display, drag it across and press F.
 
-SITE="https://raymondmcnally.github.io/as-water-arrives"
+SITE="https://raymondmcnally.github.io/As-Water-Arrives"
 PROJECTORS=2
 KIOSK_X=0
 PROJECTOR_X=1920

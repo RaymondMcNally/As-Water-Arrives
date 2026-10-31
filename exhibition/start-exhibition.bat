@@ -2,7 +2,7 @@
 rem As Water Arrives exhibition (Windows): opens the projector window(s) and the kiosk in Chrome, one per display.
 rem PROJECTORS=2 opens a second projector window (project.html?out=2); choose "Two" on the Projection page as well.
 rem Set SITE to the website's address and the X positions to where each display starts (Settings > Display).
-set SITE=https://raymondmcnally.github.io/as-water-arrives
+set SITE=https://raymondmcnally.github.io/As-Water-Arrives
 set PROJECTORS=2
 set KIOSK_X=0
 set PROJECTOR_X=1920
