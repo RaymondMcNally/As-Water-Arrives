@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Make a model · As Water Arrives</title>
+<meta name="description" content="Cut a square out of the 1:2500 Sligo borough model and download it as a 3D-print tile, a laser-cut contour kit or a contour map.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/model.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="index.html"><b>As Water Arrives</b><span>Sligo borough model · A-IARG 2027</span></a>
+    <nav aria-label="Pages"><a href="index.html">The model</a><a href="kiosk.html">Kiosk</a><a href="project.html">Projection</a><a href="model.html" aria-current="page">Make a model</a><a href="data.html">Data</a></nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap mk-head">
+    <div class="eyebrow">Make a model</div>
+    <h1>Cut your own <em>piece of Sligo</em>.</h1>
+    <p class="lede">Drag the square anywhere in the borough, choose what to make, and download it. A 3D-print tile for the Bambu P1S, a laser-cut contour kit or a contour map, all from the same ground, buildings, roads and water as the exhibition model.</p>
+  </div>
+  <div class="wrap tool">
+    <div>
+      <div class="mapbox"><div id="map" aria-label="Map of the borough with the square to cut"></div><div class="mk-chip" id="where"></div></div>
+      <div class="mk-preview" id="preview" hidden><canvas id="pv3d" aria-label="Preview of the 3D print"></canvas><div id="pvSvg"></div></div>
+    </div>
+
+    <aside class="panel">
+      <div class="grp">
+        <span class="lab">Make</span>
+        <div class="seg" role="group" aria-label="What to make">
+          <button type="button" data-p="print" aria-pressed="true">3D-print tile</button>
+          <button type="button" data-p="laser" aria-pressed="false">Laser contour kit</button>
+          <button type="button" data-p="map" aria-pressed="false">Contour map</button>
+        </div>
+        <p class="note" id="pNote"></p>
+      </div>
+
+      <div class="grp">
+        <span class="lab">Scale and size</span>
+        <label class="row">Scale <select id="scale"></select></label>
+        <label class="row" id="sizeRow">Size <select id="size"></select></label>
+        <p class="note mono" id="extent"></p>
+      </div>
+
+      <div class="grp" data-for="print">
+        <span class="lab">3D print</span>
+        <label class="row">Ground exaggeration <select id="vex"><option value="1">1× (true)</option><option value="1.5">1.5×</option><option value="2">2×</option></select></label>
+        <label class="row"><input type="checkbox" id="roads" checked> Cut the roads in</label>
+        <label class="row"><input type="checkbox" id="scheme"> Include the proposed Garavogue crossing</label>
+        <p class="note">Buildings stay at their true height above the ground. Print in matte white PLA with 10–15% infill.</p>
+      </div>
+
+      <div class="grp" data-for="laser" hidden>
+        <span class="lab">Laser kit</span>
+        <label class="row">Board <select id="board"><option value="1">1 mm card</option><option value="2" selected>2 mm board</option><option value="3">3 mm MDF</option></select></label>
+        <label class="row">Sheet <select id="sheet"><option value="600x400">600 × 400 mm</option><option value="841x594">A1, 841 × 594 mm</option><option value="1000x600">1000 × 600 mm</option></select></label>
+        <label class="row"><input type="checkbox" id="engB" checked> Engrave building footprints</label>
+        <p class="note" id="layersNote"></p>
+      </div>
+
+      <div class="grp" data-for="map" hidden>
+        <span class="lab">Contour map</span>
+        <label class="row">Contour interval <select id="interval"><option value="1">1 m</option><option value="2" selected>2 m</option><option value="5">5 m</option></select></label>
+        <label class="row"><input type="checkbox" id="mB" checked> Buildings</label>
+        <label class="row"><input type="checkbox" id="mR" checked> Roads</label>
+        <label class="row"><input type="checkbox" id="mW" checked> Water</label>
+      </div>
+
+      <div class="grp">
+        <button type="button" class="btn primary" id="make">Make it</button>
+        <div class="prog" id="prog" hidden><i></i></div>
+        <p class="status" id="status"></p>
+        <div class="row" id="dl"></div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<footer class="foot"><div class="wrap"><span>Ground: 2006 Sligo survey and OPW 2011 lidar (CC BY 4.0). Buildings: Tailte Éireann. Roads and water: © OpenStreetMap contributors.</span><span>Created by R McNally</span></div></footer>
+<script src="vendor/maplibre-gl.js"></script>
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="js/common.js"></script>
+<script src="js/model-core.js"></script>
+<script src="js/print3d.js"></script>
+<script src="js/model.js"></script>
+</body>
+</html>

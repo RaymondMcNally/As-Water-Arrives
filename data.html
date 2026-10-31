@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Data · As Water Arrives</title>
+<meta name="description" content="Where the Sligo borough model's ground, buildings, roads, water and town data come from, how they were processed, and the files to use in QGIS.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/site.css">
+<style>
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; background: var(--paper) }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top }
+  th { font: 500 11.5px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2) }
+  td code { font: 13px var(--f-mono) }
+  .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="index.html"><b>As Water Arrives</b><span>Sligo borough model · A-IARG 2027</span></a>
+    <nav aria-label="Pages"><a href="index.html">The model</a><a href="kiosk.html">Kiosk</a><a href="project.html">Projection</a><a href="model.html">Make a model</a><a href="data.html" aria-current="page">Data</a></nav>
+  </div>
+</header>
+<main>
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Data</div>
+    <h1>What the model is <em>made of</em>.</h1>
+    <p class="lede">Everything on this site is public: no addresses, no individual sale prices and nothing that identifies a household. Coordinates are Irish Transverse Mercator (EPSG:2157); heights are metres above Malin Head (m OD).</p>
+  </div>
+</section>
+<section class="alt">
+  <div class="wrap">
+    <h2>Sources</h2>
+    <div class="tbl"><table>
+      <tr><th>Layer</th><th>Source</th><th>Notes</th></tr>
+      <tr><td>Ground</td><td>2006 ground survey of Sligo (253,470 spot heights); OPW 2011 lidar, 2 m DTM and DSM, CC BY 4.0</td><td>The survey was decoded, triangulated and gridded at 2 m. Its gaps, mainly water and land built on since, are filled from the lidar ground model, which agrees with it to about 1 cm.</td></tr>
+      <tr><td>Buildings</td><td>Tailte Éireann footprints and heights; OPW lidar</td><td>8,587 heights from the building data; 2,076 from the lidar surface model (90th percentile within the footprint); 1,251 small sheds at 3 or 6 m. Lidar heights are capped at 4.5 m for footprints under 60 m² and 10 m up to 300 m², because the lidar often recorded trees over sheds. Flat roofs at main-roof height.</td></tr>
+      <tr><td>Roads</td><td>© OpenStreetMap contributors (Geofabrik, ODbL)</td><td>Widths: trunk 12 m, primary 10, secondary 9, tertiary 8, residential 6, pedestrian 5, service 4. Paths and tracks are left off the model.</td></tr>
+      <tr><td>Water</td><td>© OpenStreetMap contributors; survey gaps; OPW lidar</td><td>River, harbour, bay (tidal flats shown as water) and Lough Gill. Levels: about 0.5 m OD for the harbour and bay, 3.8 m for the lake and the river above Hyde Bridge.</td></tr>
+      <tr><td>Town data</td><td>CSO Census 2022 small areas; SEAI BER; GeoDirectory; Sligo &amp; Environs Development Plan zoning; National Monuments Service</td><td>From the Sligo God's Eye model, public fields only. Deprivation scores are reconstructed from the Pobal HP method and are not official.</td></tr>
+      <tr><td>River flood maps</td><td>OPW, floodinfo.ie: River (Sligo) flood extents, high, medium and low probability (10%, 5% and 1% chance each year)</td><td>Clipped to the borough; each building records the most likely band its footprint touches. Indicative; see floodinfo.ie for the official maps and their conditions of use.</td></tr>
+      <tr><td>Live water levels</td><td>OPW waterlevel.ie, CC BY 4.0</td><td>Shown on the kiosk when the browser can reach the feed.</td></tr>
+    </table></div>
+  </div>
+</section>
+<section>
+  <div class="wrap grid2">
+    <div>
+      <h2>The water scenarios</h2>
+      <p>For every point on the ground, the site works out the lowest water level, starting from the sea or from Lough Gill, at which water could spread over the land to reach it. This is a morphological reconstruction on the 2 m ground model. Each building takes the lowest value inside its footprint; the kiosk calls these "Sea level that first reaches it" and "Lough Gill level that first reaches it".</p>
+      <p>The lake scenario is stopped at the weir at Hyde Bridge, so lake water cannot simply run down the tidal river to the sea. Both scenarios ignore tides, wind, defences, drainage, rainfall and time. They show what lies low and connected, as a basis for discussion. They do not forecast floods. Official flood maps are at floodinfo.ie.</p>
+    </div>
+    <div>
+      <h2>Files</h2>
+      <div class="tbl"><table>
+        <tr><th>File</th><th>What</th></tr>
+        <tr><td><code>data/buildings.json</code></td><td>Buildings, WGS 84, with use, height, ground level, water reach and census area</td></tr>
+        <tr><td><code>data/flood.json</code></td><td>Water scenario outlines: sea 2–6 m OD, Lough Gill 4.5–8 m OD</td></tr>
+        <tr><td><code>data/opw_flood.json</code></td><td>OPW river flood extents, 10%, 5% and 1% a year</td></tr>
+        <tr><td><code>data/water.json</code></td><td>Water today, with its level</td></tr>
+        <tr><td><code>data/areas.json</code>, <code>zoning.json</code></td><td>Census small areas; development plan zoning</td></tr>
+        <tr><td><code>data/model.json</code></td><td>The circle, the 52 tiles and the proposed crossing</td></tr>
+        <tr><td><code>data/model/dtm2m.bin</code></td><td>The ground: 2,051 × 2,051 Int16 centimetres, 2 m, origin in <code>terrain.json</code></td></tr>
+      </table></div>
+      <p class="note" style="margin-top:12px">The GeoJSON files open directly in QGIS. Project them to EPSG:2157 to line them up with the model.</p>
+    </div>
+  </div>
+</section>
+</main>
+<footer class="foot"><div class="wrap"><span>Contains Irish Public Sector Data (OPW) licensed under CC BY 4.0. © OpenStreetMap contributors. Tailte Éireann data used under licence.</span><span>Created by R McNally</span></div></footer>
+</body>
+</html>

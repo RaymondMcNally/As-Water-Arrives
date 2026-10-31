@@ -1,0 +1,54 @@
+{
+  "scale": 2500,
+  "tile_m": 575,
+  "grid_m": 1.0,
+  "centre": [
+    569150.1,
+    835838.2
+  ],
+  "radius_m": 2048.26,
+  "terrain_exaggeration": 1.0,
+  "datum_m": -3.0,
+  "base_mm": 9.0,
+  "water_recess_m": 1.5,
+  "road_cut_m": 0.75,
+  "close_gaps_m": 0.6,
+  "road_widths_m": {
+    "trunk": 12,
+    "trunk_link": 8,
+    "primary": 10,
+    "primary_link": 7,
+    "secondary": 9,
+    "secondary_link": 7,
+    "tertiary": 8,
+    "tertiary_link": 7,
+    "residential": 6,
+    "unclassified": 6,
+    "living_street": 5,
+    "pedestrian": 5,
+    "service": 4
+  },
+  "wall_mm": 7.0,
+  "rib_mm": 1.6,
+  "rib_pitch_mm": 40.0,
+  "cavity_height_mm": 6.5,
+  "label_pad_mm": [
+    70,
+    22
+  ],
+  "label_depth_mm": 0.6,
+  "magnets": {
+    "diameter_mm": 6.0,
+    "thickness_mm": 3.0,
+    "clearance_mm": 0.15,
+    "centre_z_mm": 4.5,
+    "edge_margin_mm": 12.0
+  },
+  "tiles": "out/borough_1-2500.gpkg",
+  "dtm": "out/Sligo_DTM_filled_2m_ITM.tif",
+  "water": "out/water_model.gpkg",
+  "buildings": "out/buildings_for_mesh.gpkg",
+  "roads": "out/osm_roads_sligo.gpkg",
+  "proposal": "out/Proposal_Garavogue_Crossing.gpkg",
+  "out_dir": "tiles/borough_1-2500"
+}

@@ -1,0 +1,1 @@
+{"origin":[567100.1,833788.2],"size":4100.0,"grids":{"dtm2m":{"n":2051,"step":2.0},"dtm8m":{"n":513,"step":8.0}},"units":"Int16 centimetres, little-endian, row 0 = south, column 0 = west, nodes on the grid","datum":"m OD (Malin Head)"}

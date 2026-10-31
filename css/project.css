@@ -1,0 +1,18 @@
+/* Projection page. html.proj-out is the projector window: black, the warped image only. */
+.pj { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 22px; padding: 22px 0 40px; align-items: start }
+.pj-preview { position: relative; aspect-ratio: 16 / 10; background: #000; border-radius: 6px; overflow: hidden; border: 1px solid var(--line) }
+.pj-preview canvas, .pj-out canvas { position: absolute; inset: 0; width: 100%; height: 100% }
+.pj-bar { margin: 12px 0 6px }
+.pj-link { font: 500 13px var(--f-mono); color: var(--ink-2) }
+.pj-link[data-on="1"] { color: var(--ok) }
+.pj-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+.pj-two input { width: 100% }
+.pj-two label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-2) }
+.pj-layers { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 14.5px }
+.steps { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px }
+html.proj-out, html.proj-out body { background: #000; height: 100%; overflow: hidden; margin: 0 }
+html.proj-out header, html.proj-out main, html.proj-out footer { display: none !important }
+.pj-out { position: fixed; inset: 0; background: #000; cursor: none }
+.pj-hint { position: absolute; left: 12px; bottom: 10px; font: 500 12px "IBM Plex Mono", monospace; color: #555; transition: opacity .6s }
+.pj-out.quiet .pj-hint { opacity: 0 }
+@media (max-width: 960px) { .pj { grid-template-columns: minmax(0, 1fr) } }

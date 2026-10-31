@@ -1,0 +1,122 @@
+/* As Water Arrives · Sligo borough model — shared style for the public pages.
+   Palette from the conference image: Atlantic water, foam, lichen on the cliff edge. */
+:root {
+  --deep: #0b1d24;        /* Atlantic, near black */
+  --sea: #1f5f6b;         /* water */
+  --sea-2: #2f8796;
+  --foam: #eef3f2;        /* page */
+  --paper: #ffffff;
+  --ink: #0e1b20;
+  --ink-2: #44575d;
+  --line: #d3dedc;
+  --lichen: #d9822b;      /* accent */
+  --lichen-2: #f0a54a;
+  --rock: #a8977f;
+  --ok: #2f8a5a;
+  --r: 4px;
+  --f-head: "Fraunces", Georgia, "Times New Roman", serif;
+  --f-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html { -webkit-text-size-adjust: 100% }
+body { margin: 0; background: var(--foam); color: var(--ink); font: 16px/1.55 var(--f-body) }
+a { color: var(--sea) }
+a:hover { color: var(--lichen) }
+img { max-width: 100%; display: block }
+:focus-visible { outline: 2px solid var(--lichen); outline-offset: 2px }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 max(16px, env(safe-area-inset-left)) }
+h1, h2, h3 { font-family: var(--f-head); font-weight: 600; line-height: 1.12; letter-spacing: -.01em; text-wrap: balance; margin: 0 0 .5em }
+h1 { font-size: clamp(34px, 5.4vw, 64px) }
+h1 em, h2 em { font-style: italic; color: var(--sea) }
+h2 { font-size: clamp(26px, 3.2vw, 38px) }
+h3 { font-size: 21px }
+p { margin: 0 0 1em; max-width: 68ch }
+.eyebrow { font: 500 12px/1.4 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 12px }
+.mono { font-family: var(--f-mono) }
+.dim { color: var(--ink-2) }
+
+/* top bar */
+header.top { background: var(--deep); color: var(--foam); position: sticky; top: 0; z-index: 20 }
+header.top .wrap { display: flex; align-items: center; gap: 20px; min-height: 58px; flex-wrap: wrap }
+.brand { color: var(--foam); text-decoration: none; display: flex; flex-direction: column; line-height: 1.15; padding: 8px 0 }
+.brand b { font: 600 18px/1.1 var(--f-head) }
+.brand span { font: 500 10.5px/1.3 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: #9fc3c6 }
+header.top nav { margin-left: auto; display: flex; gap: 4px; flex-wrap: wrap }
+header.top nav a { color: #cfe0df; text-decoration: none; font-size: 14.5px; padding: 8px 11px; border-radius: var(--r) }
+header.top nav a:hover { color: #fff; background: rgba(255,255,255,.07) }
+header.top nav a[aria-current="page"] { color: var(--lichen-2); box-shadow: inset 0 -2px 0 var(--lichen-2); border-radius: 0 }
+
+/* sections */
+section { padding: 56px 0 }
+section.alt { background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line) }
+.lede { font-size: 19px; color: var(--ink-2); max-width: 62ch }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 28px }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 20px }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 22px; display: flex; flex-direction: column; gap: 8px }
+.card h3 { margin: 0 }
+.card .go { margin-top: auto; font-weight: 600; text-decoration: none }
+.card .num { font: 500 12px var(--f-mono); color: var(--lichen); letter-spacing: .1em }
+dl.spec { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 14.5px }
+dl.spec dt { color: var(--ink-2); font: 500 12px/1.9 var(--f-mono); text-transform: uppercase; letter-spacing: .08em }
+dl.spec dd { margin: 0 }
+.note { font-size: 13.5px; color: var(--ink-2) }
+.btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); padding: 9px 16px; border-radius: var(--r); font: 600 14.5px var(--f-body); cursor: pointer; text-decoration: none }
+.btn:hover { border-color: var(--sea) }
+.btn.primary { background: var(--sea); border-color: var(--sea); color: #fff }
+.btn.primary:hover { background: var(--deep) }
+.btn:disabled { opacity: .5; cursor: progress }
+.btn.sm { padding: 6px 11px; font-size: 13.5px }
+label.row, .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
+label.row:has(> input[type=checkbox]) { flex-wrap: nowrap; align-items: flex-start }
+label.row > input[type=checkbox] { flex: none; margin-top: 3px }
+select, input[type=number], input[type=text] { font: 15px var(--f-body); padding: 7px 9px; border: 1px solid var(--line); border-radius: var(--r); background: #fff; color: var(--ink); min-width: 0 }
+input[type=range] { accent-color: var(--sea); width: 100% }
+input[type=checkbox] { accent-color: var(--sea); width: 17px; height: 17px }
+
+/* hero on the start page */
+.hero { position: relative; color: #fff; background: var(--deep) }
+.hero .img { position: absolute; inset: 0; background: url(../img/atlantic-edge.jpg) center 40%/cover; opacity: .55 }
+.hero .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11,29,36,.15), rgba(11,29,36,.88) 78%) }
+.hero .wrap { position: relative; padding-top: 120px; padding-bottom: 54px }
+.hero h1 { color: #fff; max-width: 16ch }
+.hero h1 em { color: var(--lichen-2) }
+.hero .lede { color: #d9e6e5 }
+.hero .eyebrow { color: #b9d3d3 }
+.hero .meta { display: flex; gap: 26px; flex-wrap: wrap; margin-top: 26px; font: 500 13px/1.5 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: #cfe0df }
+.hero .meta b { display: block; color: #fff; font: 600 20px/1.3 var(--f-head); letter-spacing: 0; text-transform: none }
+
+/* model ring graphic */
+.ring { width: 100%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 50% 50%, #fff 0 58%, transparent 58.4%), conic-gradient(var(--sea) 0 25%, var(--sea-2) 0 50%, var(--sea) 0 75%, var(--sea-2) 0); }
+
+footer.foot { background: var(--deep); color: #b6cccb; font-size: 13.5px; padding: 30px 0 calc(30px + env(safe-area-inset-bottom)) }
+footer.foot a { color: #e3eeed }
+footer.foot .wrap { display: flex; gap: 24px; flex-wrap: wrap; justify-content: space-between }
+
+/* tool pages */
+.tool { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 22px; align-items: start; padding: 22px 0 40px }
+.panel { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 18px; display: flex; flex-direction: column; gap: 14px }
+.panel h3 { font-size: 19px; margin: 0 }
+.panel .grp { display: flex; flex-direction: column; gap: 8px; padding-bottom: 14px; border-bottom: 1px dashed var(--line) }
+.panel .grp:last-child { border-bottom: 0; padding-bottom: 0 }
+.panel .lab { font: 500 11.5px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2) }
+.seg { display: flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; flex-wrap: wrap }
+.seg button { flex: 1; border: 0; background: #fff; padding: 8px 10px; font: 500 14px var(--f-body); cursor: pointer; color: var(--ink-2); min-width: 0 }
+.seg button[aria-pressed="true"] { background: var(--sea); color: #fff }
+.mapbox { position: relative; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--deep); min-height: 560px; height: calc(100vh - 150px); max-height: 860px }
+.mapbox #map { position: absolute; inset: 0 }
+.status { font-size: 14px; color: var(--ink-2); min-height: 1.5em }
+.status.err { color: #b3261e }
+.prog { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden }
+.prog i { display: block; height: 100%; width: 0; background: var(--lichen); transition: width .2s }
+@media (max-width: 900px) {
+  .tool { grid-template-columns: minmax(0, 1fr) }
+  .mapbox { height: 62vh; min-height: 380px }
+}
+@media (max-width: 640px) {
+  header.top nav { margin-left: 0 }
+  section { padding: 40px 0 }
+  .hero .wrap { padding-top: 70px }
+}

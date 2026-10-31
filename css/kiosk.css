@@ -1,0 +1,144 @@
+/* Kiosk: the public touch screen beside the model. Dark, large targets, no scrolling page. */
+:root {
+  --bg: #071419; --panel: #0c1f26; --panel-2: #10272f; --line: #1d3b45; --ink: #e5efee; --dim: #8fadb0; --faint: #4b6870;
+  --acc: #f0a54a; --acc-2: #d9822b; --water: #3fa9f5; --lake: #36c6d3; --match: #ffb000; --crit: #ff6a55;
+  --f-head: "Fraunces", Georgia, serif; --f-body: "IBM Plex Sans", Arial, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 17px/1.45 var(--f-body); overflow: hidden; -webkit-user-select: none; user-select: none; touch-action: manipulation }
+button, select, input { font: inherit; color: inherit }
+:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px }
+.k { position: fixed; inset: 0; display: grid; grid-template-rows: auto auto 1fr auto; padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); gap: 12px }
+
+.k-top { display: flex; align-items: center; gap: 20px; flex-wrap: wrap }
+.k-title { display: flex; flex-direction: column; line-height: 1.15 }
+.k-title b { font: 600 30px/1.05 var(--f-head); letter-spacing: -.01em }
+.k-title span { font: 500 12.5px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin-top: 4px }
+.k-org { margin-left: auto; font: 500 12.5px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim) }
+.k-gauge { display: flex; gap: 14px; font: 500 12.5px var(--f-mono); color: var(--dim); padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px }
+.k-gauge b { color: var(--water); font-weight: 500 }
+
+.k-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px }
+.k-tab { display: flex; gap: 12px; align-items: center; text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; cursor: pointer; min-height: 64px }
+.k-tab b { display: block; font: 600 18px/1.2 var(--f-body) }
+.k-tab small { display: block; color: var(--dim); font-size: 13.5px }
+.k-num { font: 500 13px var(--f-mono); color: var(--faint) }
+.k-tab[aria-pressed="true"] { border-color: var(--acc); background: linear-gradient(180deg, rgba(240,165,74,.14), rgba(240,165,74,.04)) }
+.k-tab[aria-pressed="true"] .k-num { color: var(--acc) }
+
+.k-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(380px, 34%); gap: 12px; min-height: 0 }
+.k-map { position: relative; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: #050d10; min-height: 0 }
+.k-map #map { position: absolute; inset: 0 }
+.maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right, .maplibregl-ctrl-top-left, .maplibregl-ctrl-top-right { display: none }
+.k-legend { position: absolute; left: 12px; bottom: 12px; background: rgba(7,20,25,.86); border: 1px solid var(--line); border-radius: 5px; padding: 8px 11px; font: 12.5px/1.55 var(--f-mono); color: var(--dim); max-width: 60%; pointer-events: none }
+.k-legend:empty { display: none }
+.k-legend div { display: flex; align-items: center; gap: 8px }
+.k-legend i { width: 14px; height: 10px; border-radius: 2px; flex: none }
+.k-chip { position: absolute; left: 12px; top: 12px; background: rgba(7,20,25,.86); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 13.5px; color: var(--dim); pointer-events: none }
+.k-insp { position: absolute; right: 12px; top: 12px; width: min(340px, 60%); max-height: calc(100% - 24px); overflow: auto; background: rgba(9,24,30,.95); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; font-size: 15px }
+.k-insp h3 { margin: 0 0 4px; font: 600 20px/1.2 var(--f-head) }
+.k-insp dl { display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; margin: 10px 0 0 }
+.k-insp dt { color: var(--dim) }
+.k-insp dd { margin: 0; font-family: var(--f-mono); text-align: right }
+.k-insp .x { position: absolute; right: 8px; top: 6px; background: none; border: 0; font-size: 24px; color: var(--dim); cursor: pointer; padding: 4px 8px }
+
+.k-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow: auto; min-height: 0 }
+.k-pane { display: flex; flex-direction: column; gap: 14px }
+.k-pane h2 { font: 600 26px/1.15 var(--f-head); margin: 0 }
+.k-pane h3 { font: 600 19px/1.2 var(--f-head); margin: 6px 0 0 }
+.k-pane p { margin: 0 }
+.k-lede { color: var(--dim); font-size: 16.5px }
+.k-small { font-size: 14px; color: var(--dim) }
+.k-dim { color: var(--dim) }
+.k-note { font-size: 13.5px; color: var(--dim) }
+.k-lab { font: 500 12px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim) }
+.k-group { display: flex; flex-direction: column; gap: 8px }
+.k-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center }
+
+.k-seg { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px }
+.k-seg button { text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; cursor: pointer }
+.k-seg button b { display: block; font-size: 17px }
+.k-seg button small { color: var(--dim); font-size: 13px }
+.k-seg button[aria-pressed="true"] { border-color: var(--water); box-shadow: inset 0 0 0 1px var(--water) }
+#srcLake[aria-pressed="true"] { border-color: var(--lake); box-shadow: inset 0 0 0 1px var(--lake) }
+#srcOpw[aria-pressed="true"] { border-color: #8f86ff; box-shadow: inset 0 0 0 1px #8f86ff }
+.k-opw .k-levelhead output { color: #a9a2ff; font-size: 28px }
+.k-opw .k-level input[type=range] { accent-color: #8f86ff }
+.k-seg-sm button { padding: 8px 12px; font-size: 15px }
+
+.k-level { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px 10px }
+.k-levelhead { display: flex; justify-content: space-between; align-items: baseline }
+.k-levelhead span { color: var(--dim) }
+.k-levelhead output { font: 600 34px/1 var(--f-head); color: var(--water) }
+.k-lake .k-levelhead output { color: var(--lake) }
+.k-level input[type=range] { width: 100%; height: 44px; accent-color: var(--water); margin: 6px 0 0 }
+.k-lake .k-level input[type=range] { accent-color: var(--lake) }
+.k-ticks { display: flex; justify-content: space-between; font: 12px var(--f-mono); color: var(--faint) }
+
+.k-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px }
+.k-stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px }
+.k-stat b { display: block; font: 600 28px/1.1 var(--f-head); color: var(--ink) }
+.k-stat span { font-size: 13.5px; color: var(--dim) }
+.k-stat.hot b { color: var(--match) }
+
+.k-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; cursor: pointer; text-decoration: none; color: var(--ink); min-height: 48px }
+.k-btn:hover { border-color: var(--dim) }
+.k-btn-acc { border-color: var(--acc); color: var(--acc); background: rgba(240,165,74,.1) }
+.k-btn-sm { padding: 8px 12px; min-height: 40px; font-size: 15px }
+
+.k-presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px }
+.k-preset { text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; cursor: pointer; min-height: 56px; font-size: 15.5px; line-height: 1.3 }
+.k-preset small { display: block; color: var(--dim); font-size: 12.5px; margin-top: 3px }
+.k-preset[aria-pressed="true"] { border-color: var(--match); color: var(--match) }
+.k-preset[aria-pressed="true"] small { color: #d9b56a }
+.k-result { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; font-size: 15px }
+.k-result .big { font: 600 34px/1 var(--f-head); color: var(--match); margin-right: 8px }
+.k-result ul { margin: 8px 0 0; padding-left: 18px; color: var(--dim); font-size: 14px }
+.k-build summary { cursor: pointer; color: var(--dim); padding: 6px 0 }
+.k-build[open] { display: flex; flex-direction: column; gap: 10px }
+.k-conds { display: flex; flex-direction: column; gap: 6px }
+.k-cond { display: grid; grid-template-columns: minmax(0, 1fr) 64px 80px 36px; gap: 6px }
+.k-cond select, .k-cond input, .k-select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 8px; min-width: 0; font-size: 14.5px }
+.k-cond .x { background: none; border: 0; color: var(--dim); font-size: 22px; cursor: pointer }
+
+.k-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px }
+.k-tile { display: flex; gap: 10px; align-items: center; text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px; cursor: pointer; min-height: 62px }
+.k-tile i { width: 18px; height: 18px; border-radius: 4px; flex: none; border: 1px solid rgba(255,255,255,.2) }
+.k-tile b { display: block; font-size: 15.5px; font-weight: 600 }
+.k-tile small { color: var(--dim); font-size: 12.5px }
+.k-tile[aria-pressed="false"] { opacity: .55 }
+.k-tile[aria-pressed="true"] { border-color: var(--dim) }
+
+.k-foot { display: flex; align-items: center; gap: 18px; font: 500 12.5px var(--f-mono); color: var(--faint); letter-spacing: .04em }
+.k-link[data-on="1"] { color: #62d39a }
+.k-lock { margin-left: auto; background: none; border: 0; color: #20363d; font-size: 20px; width: 48px; height: 36px; cursor: default; touch-action: none }
+.k-lock.holding { color: var(--acc); transition: color 3s linear }
+
+.k-modal { position: fixed; inset: 0; background: rgba(2,8,10,.78); display: grid; place-items: center; z-index: 50 }
+.k-modal[hidden] { display: none }
+.k-dialog { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 22px; width: min(340px, 92vw); display: flex; flex-direction: column; gap: 14px }
+.k-dialog-wide { width: min(620px, 94vw) }
+.k-dialog h3 { margin: 0; font: 600 22px var(--f-head) }
+.k-pinshow { font: 500 30px var(--f-mono); letter-spacing: .3em; text-align: center; color: var(--acc) }
+.k-pinshow.bad { color: var(--crit) }
+.k-pinpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px }
+.k-pinpad button { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; height: 58px; font-size: 22px; cursor: pointer }
+.k-staffgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+
+.k-boot { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; background: var(--bg); z-index: 60; transition: opacity .6s }
+.k-boot b { font: 600 46px var(--f-head) }
+.k-boot span { font: 500 13px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-top: 8px }
+.k-boot.done { opacity: 0; pointer-events: none }
+
+@media (max-width: 1100px) {
+  .k-body { grid-template-columns: minmax(0, 1fr) }
+  .k-map { min-height: 46vh }
+  html, body { overflow: auto } .k { position: static; min-height: 100% }
+  .k-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+}
+@media (max-width: 560px) {
+  .k-tiles, .k-stats, .k-seg, .k-staffgrid { grid-template-columns: minmax(0, 1fr) }
+  .k-title b { font-size: 24px }
+}

@@ -1,0 +1,9 @@
+.mk-head { padding-top: 34px }
+.mk-head h1 { font-size: clamp(30px, 4vw, 48px) }
+.mk-chip { position: absolute; left: 12px; top: 12px; background: rgba(11,29,36,.88); color: #e6efee; font: 500 12.5px var(--f-mono); padding: 6px 10px; border-radius: 4px; pointer-events: none }
+.mk-preview { margin-top: 16px; background: var(--deep); border-radius: 6px; overflow: hidden; border: 1px solid var(--line); position: relative; aspect-ratio: 16 / 9 }
+.mk-preview canvas { width: 100%; height: 100%; display: block }
+.mk-preview #pvSvg { position: absolute; inset: 0; background: #fff; display: grid; place-items: center; overflow: hidden }
+.mk-preview #pvSvg:empty { display: none }
+.mk-preview #pvSvg svg { width: 100%; height: 100% }
+#dl a { font-size: 14px }

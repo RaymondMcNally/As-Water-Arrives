@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Projection · As Water Arrives</title>
+<meta name="description" content="Projection mapping onto the round 1:2500 model of Sligo: calibration, layers and the link to the kiosk.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/project.css">
+<script>if (/[?&]out\b/.test(location.search)) document.documentElement.classList.add('proj-out');</script>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="index.html"><b>As Water Arrives</b><span>Sligo borough model · A-IARG 2027</span></a>
+    <nav aria-label="Pages"><a href="index.html">The model</a><a href="kiosk.html">Kiosk</a><a href="project.html" aria-current="page">Projection</a><a href="model.html">Make a model</a><a href="data.html">Data</a></nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <p class="status err" id="err" hidden></p>
+    <div class="pj">
+      <div>
+        <div class="pj-preview" id="pvWrap"><canvas id="pv" aria-label="Preview of the projector image"></canvas><canvas id="pvOv" aria-hidden="true"></canvas></div>
+        <div class="row pj-bar">
+          <button type="button" class="btn primary" id="openOut">Open projector window</button>
+          <button type="button" class="btn" id="fullHere">Full screen here</button>
+          <span class="pj-link" id="link">No projector window yet</span>
+        </div>
+        <p class="note">Keys in either window: <b>F</b> full screen · <b>C</b> calibration on or off · arrow keys nudge the selected pin (Shift = 10 px).</p>
+      </div>
+
+      <aside class="panel">
+        <div class="grp">
+          <h3>The kiosk</h3>
+          <p class="status" id="kioskState"></p>
+          <label class="row"><input type="checkbox" id="follow"> Follow the kiosk</label>
+          <p class="note">When on, the projector shows whatever visitors choose at the kiosk. Turn it off to pick layers here.</p>
+        </div>
+        <div class="grp">
+          <h3>Calibrate</h3>
+          <label class="row"><input type="checkbox" id="cal"> Show pins, rim and tile seams</label>
+          <ol class="note steps">
+            <li>Hang the projector pointing straight down over Lady Erin, the centre of the model.</li>
+            <li>Drag the four pins <b>N, E, S, W</b> onto the points where the round model meets the table.</li>
+            <li>Measure the lens height above the table. If the red centre cross misses Lady Erin, adjust the offsets.</li>
+          </ol>
+          <div class="pj-two">
+            <label>Lens height above the table (mm)<input type="number" id="h" step="10" min="400" max="4000"></label>
+            <label>Projector offset east (mm)<input type="number" id="nx" step="5"></label>
+            <label>Projector offset north (mm)<input type="number" id="ny" step="5"></label>
+            <label>Brightness<input type="range" id="bright" min="30" max="100"></label>
+          </div>
+          <p class="note mono" id="pinsOut"></p>
+          <button type="button" class="btn sm" id="resetPins">Reset the pins</button>
+        </div>
+        <div class="grp">
+          <h3>How the tiles were printed</h3>
+          <div class="pj-two">
+            <label>Base slab (mm)<input type="number" id="base" step=".5"></label>
+            <label>Datum (m OD)<input type="number" id="datum" step=".5"></label>
+            <label>Ground exaggeration<input type="number" id="vex" step=".25" min="1" max="3"></label>
+          </div>
+          <p class="note">These set the height of each point on the model, so the image lands on the hills rather than beside them. The printed set uses 9 mm, −3 m and 1×.</p>
+        </div>
+        <div class="grp">
+          <h3>Layers (when not following the kiosk)</h3>
+          <div id="layers" class="pj-layers"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<div class="pj-out" id="outStage" hidden><canvas id="out"></canvas><canvas id="outOv"></canvas><div class="pj-hint">F full screen · C calibration</div></div>
+
+<footer class="foot"><div class="wrap"><span>As Water Arrives · 16th A-IARG conference · ATU Sligo, 11–12 March 2027</span><span>Created by R McNally</span></div></footer>
+<script src="vendor/three.min.js"></script>
+<script src="js/common.js"></script>
+<script src="js/query.js"></script>
+<script src="js/project.js"></script>
+</body>
+</html>
