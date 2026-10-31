@@ -41,7 +41,7 @@
   const nProj = () => { try { return (JSON.parse(localStorage.getItem('aiarg-projector-v2') || '{}').n) === 2 ? 2 : 1; } catch (e) { return 1; } };
 
   const BUS = await AW.buses();
-  const TT = AW.traffic; TT.setConfigKey(cfg.tomtomKey); let ttB = -1, ttErr = '';
+  const TT = AW.traffic; TT.setConfigKey(cfg.tomtomKey); let ttB = -1, ttErr = '', ttRetry = 0;
   const TY = AW.typicalTraffic; let tyStep = null;
   const live = () => !!TT.key() && !ttErr;                  // live TomTom when there is a working key, typical traffic otherwise
 
@@ -115,7 +115,7 @@
     } else if (ttB !== b) { map.getSource('traffic').setTiles([TT.template(b)]); ttB = b; }
     map.setLayoutProperty('traffic', 'visibility', 'visible');
   }
-  map.on('error', e => { if (e.sourceId === 'traffic' && !ttErr) { ttErr = 'TomTom did not load'; trafficTick(); legend(); TT.test().then(r => { $('#ttState').textContent = 'Live traffic is off: ' + r.msg; }); } });
+  map.on('error', e => { if (e.sourceId === 'traffic' && !ttErr) { ttErr = 'TomTom did not load'; trafficTick(); legend(); TT.test().then(r => { if (r.ok && ttRetry++ < 2) { $('#ttState').textContent = 'Live traffic restarted: ' + r.msg; ttReset(); P.send({ t: 'tt-key' }); } else $('#ttState').textContent = 'Live traffic is off: ' + r.msg; }); } });
   setInterval(trafficTick, 15000);
   map.addLayer({ id: 'out', type: 'fill', source: 'out', paint: { 'fill-color': '#050d10', 'fill-opacity': .9 } });
   map.addLayer({ id: 'ring', type: 'line', source: 'ring', paint: { 'line-color': '#f0a54a', 'line-width': 1.6, 'line-dasharray': [3, 2] } });

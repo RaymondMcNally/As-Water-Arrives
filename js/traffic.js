@@ -7,7 +7,8 @@
   'use strict';
   const LS = 'aiarg-tomtom-key', LSS = 'aiarg-tomtom-style', REFRESH_MS = 5 * 60 * 1000, Z = 15;
   const STYLES = ['relative0-dark', 'relative0', 'relative'];        // tried in turn if TomTom rejects a style
-  let STYLE = (() => { try { return localStorage.getItem(LSS) || STYLES[0]; } catch (e) { return STYLES[0]; } })();
+  let STYLE = STYLES[0];
+  const style = () => { try { return localStorage.getItem(LSS) || STYLE; } catch (e) { return STYLE; } };   // read each time, so every window uses the style that works
   let cfgKey = '';
   const T = {
     REFRESH_MS, Z,
@@ -19,9 +20,9 @@
     describe() { const k = T.key(); if (!k) return 'no key saved'; const ok = /^[A-Za-z0-9]{32}$/.test(k); return `saved key: ${k.length} characters, starts ${k.slice(0, 4)}…${ok ? '' : k.startsWith('eyJ') ? ' (this looks like a Cesium ion token, not a TomTom key)' : ' (TomTom keys are 32 letters and numbers)'}`; },
     setConfigKey(k) { cfgKey = (k || '').trim(); },
     bucket(now = Date.now()) { return Math.floor(now / REFRESH_MS); },
-    url(z, x, y, b = T.bucket()) { return `https://api.tomtom.com/traffic/map/4/tile/flow/${STYLE}/${z}/${x}/${y}.png?key=${encodeURIComponent(T.key())}&tileSize=256&thickness=10&t=${b}`; },
+    url(z, x, y, b = T.bucket()) { return `https://api.tomtom.com/traffic/map/4/tile/flow/${style()}/${z}/${x}/${y}.png?key=${encodeURIComponent(T.key())}&tileSize=256&thickness=10&t=${b}`; },
     // the {z}/{x}/{y} form MapLibre wants, for one refresh bucket
-    template(b = T.bucket()) { return `https://api.tomtom.com/traffic/map/4/tile/flow/${STYLE}/{z}/{x}/{y}.png?key=${encodeURIComponent(T.key())}&tileSize=256&thickness=4&t=${b}`; },
+    template(b = T.bucket()) { return `https://api.tomtom.com/traffic/map/4/tile/flow/${style()}/{z}/{x}/{y}.png?key=${encodeURIComponent(T.key())}&tileSize=256&thickness=4&t=${b}`; },
     lon2x: (lon, z) => (lon + 180) / 360 * 2 ** z,
     lat2y: (lat, z) => { const r = lat * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 2 ** z; },
     x2lon: (x, z) => x / 2 ** z * 360 - 180,
@@ -31,7 +32,8 @@
       if (!T.key()) return { ok: false, msg: 'No key saved in this browser.' };
       const z = Z, x = Math.floor(T.lon2x(-8.4757, z)), y = Math.floor(T.lat2y(54.2717, z));
       let last = '';
-      for (const st of [STYLE, ...STYLES.filter(v => v !== STYLE)]) {
+      const cur = style();
+      for (const st of [cur, ...STYLES.filter(v => v !== cur)]) {
         const u = `https://api.tomtom.com/traffic/map/4/tile/flow/${st}/${z}/${x}/${y}.png?key=${encodeURIComponent(T.key())}&tileSize=256&thickness=10&t=test${Date.now()}`;
         let r;
         try { r = await fetch(u, { cache: 'no-store', mode: 'cors' }); }
