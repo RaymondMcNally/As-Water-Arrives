@@ -29,14 +29,17 @@
     { id: 'scheme', n: 'Proposed river crossing', s: 'Garavogue road and bridge', col: C.scheme, on: false },
     { id: 'relief', n: 'Shaded relief', s: 'Light on the hills', col: '#8a9a9c', on: false },
     { id: 'grid', n: 'Tile grid', s: 'The 52 printed tiles', col: '#f0a54a', on: false },
-    { id: 'opw', n: 'OPW flood maps', s: 'River: 1 in 10, 20 and 100 years', col: '#8f86ff', on: false }
+    { id: 'opw', n: 'OPW flood maps', s: 'River: 1 in 10, 20 and 100 years', col: '#8f86ff', on: false },
+    { id: 'buses', n: 'Town buses', s: 'S1, S2 and S3, from the timetable', col: '#ff4f7b', on: false }
   ];
-  const DEF = () => ({ tab: 'water', src: 'sea', level: 3.0, flood: true, preset: -1, query: null, layers: Object.fromEntries(LAYERS.map(l => [l.id, l.on])), areaKey: 'pct_ber_e_to_g' });
+  const DEF = () => ({ tab: 'water', src: 'sea', level: 3.0, flood: true, preset: -1, query: null, layers: Object.fromEntries(LAYERS.map(l => [l.id, l.on])), areaKey: 'pct_ber_e_to_g', busFast: false });
   let K = DEF(), touched = false, lastTouch = Date.now();
   let litB = new Set(), litA = new Set(), ready = false;
   const P = bus(m => { if (ready) onMsg(m); });
   const outs = new Set();                                   // projector windows open (0 = projector 1, 1 = projector 2)
   const nProj = () => { try { return (JSON.parse(localStorage.getItem('aiarg-projector-v2') || '{}').n) === 2 ? 2 : 1; } catch (e) { return 1; } };
+
+  const BUS = await AW.buses();
 
   // ---------------------------------------------------------------- map
   boot('Drawing the map…');
@@ -79,6 +82,12 @@
   map.addLayer({ id: 'a-sel', type: 'line', source: 'a', paint: { 'line-color': C.match, 'line-width': ['case', ['boolean', ['feature-state', 'sel'], false], 2.4, 0] } });
   map.addLayer({ id: 'mon', type: 'circle', source: 'mon', layout: { visibility: 'none' }, paint: { 'circle-radius': 4, 'circle-color': '#0b151b', 'circle-stroke-color': '#62d39a', 'circle-stroke-width': 1.6 } });
   map.addLayer({ id: 'tiles', type: 'line', source: 'tiles', layout: { visibility: 'none' }, paint: { 'line-color': '#f0a54a', 'line-width': 1, 'line-opacity': .7 } });
+  // town buses: the route lines, and a dot for each bus, moved several times a second from the timetable
+  const busLines = { type: 'FeatureCollection', features: BUS.lines.map(l => ({ type: 'Feature', properties: { col: BUS.routes[l.r].col }, geometry: { type: 'LineString', coordinates: l.x.map((x, i) => fromITM(x, l.y[i])) } })) };
+  map.addSource('bus-lines', { type: 'geojson', data: busLines });
+  map.addSource('bus', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+  map.addLayer({ id: 'bus-lines', type: 'line', source: 'bus-lines', layout: { visibility: 'none', 'line-join': 'round' }, paint: { 'line-color': ['get', 'col'], 'line-width': 1.6, 'line-opacity': .45 } });
+  map.addLayer({ id: 'bus', type: 'circle', source: 'bus', layout: { visibility: 'none' }, paint: { 'circle-radius': 5.5, 'circle-color': ['get', 'col'], 'circle-stroke-color': '#050d10', 'circle-stroke-width': 1.5 } });
   map.addLayer({ id: 'out', type: 'fill', source: 'out', paint: { 'fill-color': '#050d10', 'fill-opacity': .9 } });
   map.addLayer({ id: 'ring', type: 'line', source: 'ring', paint: { 'line-color': '#f0a54a', 'line-width': 1.6, 'line-dasharray': [3, 2] } });
 
@@ -115,7 +124,7 @@
     const vis = (id, on) => map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
     vis('roads', K.layers.roads); vis('water', K.layers.water); vis('zoning', K.layers.zoning); vis('mon', K.layers.mon);
     vis('scheme', K.layers.scheme); vis('opw', K.layers.opw); vis('tiles', K.layers.grid); vis('hs', true); map.setPaintProperty('hs', 'raster-opacity', K.layers.relief ? .8 : .45);
-    vis('area-fill', K.layers.areas);
+    vis('area-fill', K.layers.areas); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses; busTick();
     if (K.layers.areas) { const cm = areaColours(D.A, K.areaKey), pairs = []; D.A.forEach(a => { const c = cm.get(a.properties[K.areaKey]); if (c) pairs.push(a.properties.sa_pub2022, c); });
       map.setPaintProperty('area-fill', 'fill-color', pairs.length ? ['match', ['get', 'sa_pub2022'], ...pairs, 'rgba(0,0,0,0)'] : 'rgba(0,0,0,0)'); }
     legend();
@@ -128,7 +137,9 @@
     if (litA.size) L.push([C.match, 'Census areas that match']);
     if (K.layers.areas) areaColours(D.A, K.areaKey).legend.forEach(x => L.push(x));
     if (K.layers.scheme) L.push([C.scheme, 'Proposed Garavogue crossing']);
-    $('#legend').innerHTML = L.map(([c, t]) => `<div><i style="background:${c}"></i>${esc(t)}</div>`).join('');
+    if (K.layers.buses) BUS.routes.forEach(r => L.push([r.col, `Bus ${r.id}: ${r.name.replace(/ - /g, ' – ')}`]));
+    $('#legend').innerHTML = L.map(([c, t]) => `<div><i style="background:${c}"></i>${esc(t)}</div>`).join('') + (K.layers.buses ? '<div class="k-busclock" id="busClock"></div>' : '');
+    busTick();
   }
 
   // ---------------------------------------------------------------- 01 water arrives
@@ -226,7 +237,16 @@
     b.onclick = () => { touch(); K.layers[l.id] = !K.layers[l.id]; syncTiles(); showLayers(); sendState(); };
     $('#layerTiles').append(b);
   });
-  const syncTiles = () => document.querySelectorAll('.k-tile').forEach(b => b.setAttribute('aria-pressed', !!K.layers[b.dataset.id]));
+  const syncTiles = () => { document.querySelectorAll('.k-tile').forEach(b => b.setAttribute('aria-pressed', !!K.layers[b.dataset.id])); $('#busReal').setAttribute('aria-pressed', String(!K.busFast)); $('#busFast').setAttribute('aria-pressed', String(!!K.busFast)); };
+  $('#busReal').onclick = () => { touch(); K.busFast = false; syncTiles(); busTick(); sendState(); };
+  $('#busFast').onclick = () => { touch(); K.busFast = true; syncTiles(); busTick(); sendState(); };
+  function busTick() {
+    if (!K.layers.buses) return;
+    const c = BUS.clock(K.busFast), at = BUS.at(c), cl = $('#busClock');
+    map.getSource('bus').setData({ type: 'FeatureCollection', features: at.map(b => ({ type: 'Feature', properties: { col: BUS.routes[b.r].col }, geometry: { type: 'Point', coordinates: fromITM(b.E, b.N) } })) });
+    if (cl) cl.textContent = `${BUS.hhmm(c.t)} · ${at.length} bus${at.length === 1 ? '' : 'es'} running · ${c.fast ? 'a weekday in 3 minutes' : BUS.dayName[c.day] + ' timetable'}`;
+  }
+  setInterval(busTick, 125);
   Object.entries(AF).filter(([, f]) => f.t === 'num').forEach(([k, f]) => $('#areaKey').add(new Option(f.l + (f.unit ? ' (' + f.unit + ')' : ''), k)));
   $('#areaKey').onchange = e => { touch(); K.areaKey = e.target.value; K.layers.areas = true; syncTiles(); showLayers(); sendState(); };
 
@@ -265,7 +285,7 @@
   // ---------------------------------------------------------------- the projector
   function sendState() {
     touched = true;
-    P.send({ t: 'kiosk', s: { flood: K.flood ? { src: K.src, level: K.level } : null, sel: { tgt: litA.size ? 'a' : 'b', ids: litA.size ? [...litA] : [...litB] }, layers: K.layers, areaKey: K.areaKey } });
+    P.send({ t: 'kiosk', s: { flood: K.flood ? { src: K.src, level: K.level } : null, sel: { tgt: litA.size ? 'a' : 'b', ids: litA.size ? [...litA] : [...litB] }, layers: K.layers, areaKey: K.areaKey, busFast: K.busFast } });
   }
   function onMsg(m) {
     if (m.t === 'hello' && m.who === 'out') { outs.add(m.i || 0); link(); sendState(); }

@@ -21,7 +21,7 @@ The kiosk, the projection page and the projector windows must be open in the **s
 `data/buildings.json` and `data/model/buildings.json` contain building footprints derived from **Tailte Éireann (OSi)** data. Check that your licence allows publishing them on a public website. If it doesn't, keep the repository private and serve the site locally at the exhibition, or switch the footprints to OpenStreetMap buildings.
 
 ## Data
-Built by `tools/make_data.py` from the God's Eye public data and the tile-generator outputs (see `tools/`). Credits: Contains Irish Public Sector Data (OPW lidar, waterlevel.ie) licensed under CC BY 4.0; © OpenStreetMap contributors (ODbL); CSO Census 2022; SEAI BER; GeoDirectory; Sligo & Environs Development Plan; Tailte Éireann. Deprivation scores are reconstructed from the Pobal HP method and are not official.
+Built by `tools/make_data.py` from the God's Eye public data and the tile-generator outputs (see `tools/`). The town buses come from the Bus Éireann GTFS timetable via `tools/make_buses.py` (rerun it with a new feed when the timetable changes). Credits: Bus Éireann timetable data from the National Transport Authority; contains Irish Public Sector Data (OPW lidar, waterlevel.ie) licensed under CC BY 4.0; © OpenStreetMap contributors (ODbL); CSO Census 2022; SEAI BER; GeoDirectory; Sligo & Environs Development Plan; Tailte Éireann. Deprivation scores are reconstructed from the Pobal HP method and are not official.
 
 The water scenarios are a morphological reconstruction (spill level from the sea or from Lough Gill, the lake stopped at Hyde Bridge) on the 2 m ground model. They are an illustration for discussion, not a flood forecast.
 

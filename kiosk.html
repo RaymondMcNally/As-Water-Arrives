@@ -80,6 +80,14 @@
           <span class="k-lab">Colour the census areas by</span>
           <select id="areaKey" class="k-select" aria-label="Colour the census areas by"></select>
         </div>
+        <div class="k-group" id="busCtl" hidden>
+          <span class="k-lab">Town buses</span>
+          <div class="k-seg k-seg-sm" role="group" aria-label="Bus clock">
+            <button type="button" id="busReal" aria-pressed="true">Now</button>
+            <button type="button" id="busFast" aria-pressed="false">A day in 3 minutes</button>
+          </div>
+          <p class="k-note">Each dot is a bus where the Bus Éireann timetable says it should be, not a live position.</p>
+        </div>
       </section>
 
       <!-- 04 about -->
@@ -92,7 +100,7 @@
         <h3>The OPW flood maps</h3>
         <p>"OPW flood maps" shows the Office of Public Works' river flood extents for Sligo from floodinfo.ie: the land with a 10%, 5% or 1% chance of flooding from the river in any one year. They are indicative maps; floodinfo.ie has the official versions and their conditions of use.</p>
         <h3>Credits</h3>
-        <p class="k-small">Model and website by R McNally, ATU Sligo Department of Architecture, for the 16th A-IARG conference, "As Water Arrives: Architecture and Change". Data: CSO Census 2022, SEAI BER, GeoDirectory, Sligo &amp; Environs Development Plan, OPW lidar and water levels (CC BY 4.0), © OpenStreetMap contributors, Tailte Éireann. Deprivation scores are reconstructed from the Pobal HP method and are not official.</p>
+        <p class="k-small">Model and website by R McNally, ATU Sligo Department of Architecture, for the 16th A-IARG conference, "As Water Arrives: Architecture and Change". Data: CSO Census 2022, Bus Éireann timetable (NTA), SEAI BER, GeoDirectory, Sligo &amp; Environs Development Plan, OPW lidar and water levels (CC BY 4.0), © OpenStreetMap contributors, Tailte Éireann. Deprivation scores are reconstructed from the Pobal HP method and are not official.</p>
       </section>
     </div>
   </main>
@@ -128,6 +136,7 @@
 <script src="vendor/maplibre-gl.js"></script>
 <script src="js/common.js"></script>
 <script src="js/query.js"></script>
+<script src="js/buses.js"></script>
 <script src="js/kiosk.js"></script>
 </body>
 </html>

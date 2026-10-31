@@ -142,3 +142,5 @@ button, select, input { font: inherit; color: inherit }
   .k-tiles, .k-stats, .k-seg, .k-staffgrid { grid-template-columns: minmax(0, 1fr) }
   .k-title b { font-size: 24px }
 }
+
+.k-busclock { margin-top: 4px; font: 500 12.5px "IBM Plex Mono", monospace; color: #cfe3e6 }
