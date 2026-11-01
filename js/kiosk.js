@@ -47,6 +47,7 @@
   const BUS = await AW.buses();
   const UT = await AW.utilities();
   Object.values(UT).forEach(u => LAYERS.push({ id: u.id, n: u.name, s: u.sub, col: u.col, on: false }));
+  const CY = await AW.cycling(); if (CY) LAYERS.push({ id: 'cycle', n: 'Cycle routes', s: 'Tracks, shared paths and lanes', col: AW.CYCLE.track[0], on: false });
   const TT = AW.traffic; TT.setConfigKey(cfg.tomtomKey); let ttB = -1, ttErr = '', ttRetry = 0;
   const TY = AW.typicalTraffic, RC = AW.trafficRec; let tyStep = null;
   const LV = [.3, .6, .8, 1];                                   // recorded level → the colour scale typical traffic uses
@@ -145,6 +146,12 @@
     map.addSource(u.id + '-plant', { type: 'geojson', data: { type: 'FeatureCollection', features: u.plants.map(p => ({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: fromITM(...p.xy) } })) } });
     map.addLayer({ id: u.id + '-plant', type: 'circle', source: u.id + '-plant', layout: { visibility: 'none' }, paint: { 'circle-radius': 8, 'circle-color': u.col, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
   });
+  if (CY) {                                                          // cycle routes by kind, and bike parking
+    map.addSource('cycle', { type: 'geojson', data: { type: 'FeatureCollection', features: CY.lines.map(l => ({ type: 'Feature', properties: { col: AW.CYCLE[l.k][0], k: l.k }, geometry: { type: 'LineString', coordinates: l.xy.map(([e, n]) => fromITM(e, n)) } })) } });
+    map.addLayer({ id: 'cycle', type: 'line', source: 'cycle', layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'col'], 'line-width': ['match', ['get', 'k'], 'track', 3.2, 2.4] } }, 'b');
+    map.addSource('cycle-park', { type: 'geojson', data: { type: 'FeatureCollection', features: CY.parking.map(([e, n]) => ({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: fromITM(e, n) } })) } });
+    map.addLayer({ id: 'cycle-park', type: 'circle', source: 'cycle-park', layout: { visibility: 'none' }, paint: { 'circle-radius': 3.5, 'circle-color': '#ffffff', 'circle-stroke-color': AW.CYCLE.track[0], 'circle-stroke-width': 1.5 } });
+  }
   const DASH = [[0, 4, 3], [0.5, 4, 2.5], [1, 4, 2], [1.5, 4, 1.5], [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0], [0, 0.5, 3, 3.5], [0, 1, 3, 3], [0, 1.5, 3, 2.5], [0, 2, 3, 2], [0, 2.5, 3, 1.5], [0, 3, 3, 1], [0, 3.5, 3, 0.5]];
   let dashI = 0;
   setInterval(() => { dashI = (dashI + 1) % DASH.length; Object.values(UT).forEach(u => { if (K.layers[u.id]) map.setPaintProperty(u.id + '-flow', 'line-dasharray', DASH[dashI]); }); }, 90);
@@ -190,7 +197,7 @@
     const vis = (id, on) => map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
     vis('roads', K.layers.roads); vis('water', K.layers.water); vis('zoning', K.layers.zoning); vis('mon', K.layers.mon);
     vis('scheme', K.layers.scheme); vis('opw', K.layers.opw); vis('tiles', K.layers.grid); vis('hs', true); map.setPaintProperty('hs', 'raster-opacity', K.layers.relief ? .8 : .45);
-    vis('area-fill', K.layers.areas); trafficTick(); Object.values(UT).forEach(u => { vis(u.id, K.layers[u.id]); vis(u.id + '-flow', K.layers[u.id]); if (map.getLayer(u.id + '-out')) vis(u.id + '-out', K.layers[u.id]); if (map.getLayer(u.id + '-plant')) vis(u.id + '-plant', K.layers[u.id]); }); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses && !K.layers.traffic; busTick();
+    vis('area-fill', K.layers.areas); trafficTick(); Object.values(UT).forEach(u => { vis(u.id, K.layers[u.id]); vis(u.id + '-flow', K.layers[u.id]); if (map.getLayer(u.id + '-out')) vis(u.id + '-out', K.layers[u.id]); if (map.getLayer(u.id + '-plant')) vis(u.id + '-plant', K.layers[u.id]); }); if (CY) { vis('cycle', K.layers.cycle); vis('cycle-park', K.layers.cycle); } vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses && !K.layers.traffic; busTick();
     if (K.layers.areas) { const cm = areaColours(D.A, K.areaKey), pairs = []; D.A.forEach(a => { const c = cm.get(a.properties[K.areaKey]); if (c) pairs.push(a.properties.sa_pub2022, c); });
       map.setPaintProperty('area-fill', 'fill-color', pairs.length ? ['match', ['get', 'sa_pub2022'], ...pairs, 'rgba(0,0,0,0)'] : 'rgba(0,0,0,0)'); }
     legend();
@@ -205,6 +212,7 @@
     if (K.layers.scheme) L.push([C.scheme, 'Proposed Garavogue crossing']);
     if (K.layers.traffic) { (live() && !K.busFast ? TT.legend : TY.legend).forEach(x => L.push(x)); if (TT.key() && ttErr) L.push(['#555', 'Live TomTom data did not load (see staff panel)']); }
     Object.values(UT).forEach(u => { if (K.layers[u.id]) { L.push([u.col, u.id === 'sewer' ? 'Sewer pipes (dashes flow downstream)' : u.name]); if (u.points.outfall.length) L.push([u.col, 'Sewer outfalls']); u.plants.forEach(p => L.push([u.col, `● ${p.name}${p.pe ? ` (built for ${fmtN(p.pe)} people)` : ''}, just outside the model`])); } });
+    if (K.layers.cycle && CY) { Object.entries(AW.CYCLE).forEach(([k, [c, n]]) => { if (CY.km[k]) L.push([c, `${n}: ${fmtN(CY.km[k], 1)} km`]); }); L.push(['#ffffff', `Bike parking: ${CY.parking.length} places`]); }
     if (K.layers.buses) BUS.routes.forEach(r => L.push([r.col, `Bus ${r.id}: ${r.name.replace(/ - /g, ' – ')}`]));
     $('#legend').innerHTML = L.map(([c, t]) => `<div><i style="background:${c}"></i>${esc(t)}</div>`).join('') + (K.layers.buses ? '<div class="k-busclock" id="busClock"></div>' : '') + (K.layers.traffic ? (live() && !K.busFast ? '<div class="k-busclock">Traffic © TomTom, live, updated every 5 minutes</div>' : '<div class="k-busclock" id="typClock"></div>') : '');
     tyStep = null;

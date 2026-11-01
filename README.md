@@ -26,6 +26,9 @@ The **Traffic** layer shows **typical traffic** on the main roads for the time o
 ## Sea-level rise
 `tools/make_opw_future.py` clips the OPW's national coastal flood maps (2021: present day, and future scenarios +0.5 to +2.0 m for about 2100) and the river's mid-range and high-end future extents to the circle (`data/opw_future.json`) and gives each building the smallest rise that reaches it (`cf2`, `cf20`, `cf100`) and its future river band (`om`, `oh`). The kiosk's **Sea-level rise** choice steps through them.
 
+## Cycle routes
+`tools/make_cycle.py` turns an Overpass Turbo export of OpenStreetMap cycling ways (the query is in the script's notes) into `data/cycle.json`: cycle tracks, shared paths, painted lanes and shared lanes, plus bike parking, and gives each building `dc`, the distance to the nearest track, path or lane. Rerun it with a fresh export to update.
+
 ## Sewers and water mains
 - **Sewers:** `tools/make_sewer.py` builds `data/sewer.json` from the 2008 Sligo & Environs sewer network (MapInfo, Irish Grid): reprojected to ITM, shifted 6.5 m west and 5 m north to fit the building footprints, and each pipe turned to run downstream using the network's flow arrows. On the kiosk and projector, dots move downstream to the outfalls.
 - **Water mains:** `tools/make_watermains.py` builds `data/watermains.json` from the Sligo County Council Water Services GIS (public water pipes, November 2007; no shift needed). It also adds the Sligo wastewater treatment plant (Finisklin) and the Foxes Den and Cairns Hill water treatment works, just outside the model, to the kiosk map.

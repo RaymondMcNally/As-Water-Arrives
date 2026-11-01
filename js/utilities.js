@@ -7,6 +7,13 @@
     sewer: { file: 'data/sewer.json', col: '#d29b5c', dot: '#ffe2b8', name: 'Sewers', sub: '2008 network, flowing to the outfalls' },
     watermains: { file: 'data/watermains.json', col: '#38d6f5', dot: '#d8f8ff', name: 'Water mains', sub: 'Public supply pipes, 2007' }
   };
+  // cycling (data/cycle.json): lines by kind, and bike parking
+  AW.CYCLE = { track: ['#19d38a', 'Cycle track, away from traffic'], path: ['#8ff0d2', 'Path shared with walkers'], lane: ['#e6f04f', 'Painted cycle lane'], shared: ['#ff9ec8', 'Shared lane or bus lane'] };
+  AW.cycling = async function () {
+    const J = await AW.getJSON('data/cycle.json').catch(() => null); if (!J) return null;
+    J.lines.forEach(l => { const c = l.c; l.xy = []; for (let i = 0; i < c.length; i += 2) l.xy.push([c[i], c[i + 1]]); });
+    return J;
+  };
   AW.utilities = async function () {
     const out = {};
     await Promise.all(Object.entries(NETS).map(async ([k, n]) => {
