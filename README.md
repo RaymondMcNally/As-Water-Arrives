@@ -37,7 +37,7 @@ The **Traffic** layer shows **typical traffic** on the main roads for the time o
 
 ## Sewers and water mains
 - **Sewers:** `tools/make_sewer.py` builds `data/sewer.json` from the 2008 Sligo & Environs sewer network (MapInfo, Irish Grid): reprojected to ITM, shifted 6.5 m west and 5 m north to fit the building footprints, and each pipe turned to run downstream using the network's flow arrows. On the kiosk and projector, dots move downstream to the outfalls.
-- **Water mains:** `tools/make_watermains.py` builds `data/watermains.json` from the Sligo County Council Water Services GIS (public water pipes, November 2007; no shift needed). It also adds the Sligo wastewater treatment plant (Finisklin) and the Foxes Den and Cairns Hill water treatment works, just outside the model, to the kiosk map.
+- **Water mains:** `tools/make_watermains.py` builds `data/watermains.json` from the Sligo County Council Water Services GIS (public water pipes, November 2007; no shift needed). With the 2008 town water model folder as a third argument it also adds the 30 water supply zones, coloured by source (Foxes Den, Kilsellagh, Cairns Hill, or "F" as recorded), and the reservoirs. It also adds the Sligo wastewater treatment plant (Finisklin) and the Foxes Den and Cairns Hill water treatment works, just outside the model, to the kiosk map.
 - Both files are published with the site. They are historic records (2007–08) of networks now operated by Uisce Éireann, not a guide to where pipes are today.
 
 ## Data
