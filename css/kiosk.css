@@ -99,7 +99,8 @@ button, select, input { font: inherit; color: inherit }
 .k-build summary { cursor: pointer; color: var(--dim); padding: 6px 0 }
 .k-build[open] { display: flex; flex-direction: column; gap: 10px }
 .k-conds { display: flex; flex-direction: column; gap: 6px }
-.k-cond { display: grid; grid-template-columns: minmax(0, 1fr) 64px 80px 36px; gap: 6px }
+.k-cond { display: grid; grid-template-columns: minmax(0, 1fr) 96px 96px 36px; gap: 6px }
+.k-cond.k-cond-cat { grid-template-columns: minmax(0, 1fr) 76px minmax(0, 1fr) 36px }
 .k-cond select, .k-cond input, .k-select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; padding: 8px; min-width: 0; font-size: 14.5px }
 .k-cond .x { background: none; border: 0; color: var(--dim); font-size: 22px; cursor: pointer }
 

@@ -399,22 +399,42 @@
   // build your own
   let tgt = 'b';
   function fieldOpts() { const o = []; if (tgt === 'b') Object.entries(BF).forEach(([k, f]) => o.push([k, 'Building · ' + f.l])); Object.entries(AF).forEach(([k, f]) => o.push(['a.' + k, (tgt === 'b' ? 'Area · ' : '') + f.l])); return o; }
+  // operators in words; text fields (Function, Use, Zone…) get a list of the values that exist, with counts
+  const OPS_NUM = [['>', 'more than'], ['>=', 'at least'], ['<', 'less than'], ['<=', 'at most'], ['=', 'equal to'], ['!=', 'not']];
+  const OPS_CAT = [['=', 'is'], ['!=', 'is not']];
+  const fdef = k => k.startsWith('a.') ? AF[k.slice(2)] : BF[k];
+  const catVals = k => { const c = new Map(), a = k.startsWith('a.');
+    (tgt === 'a' ? D.A.map(x => x.properties[k.slice(2)]) : D.B.map(b => a ? (D.SA[b.properties.sa] || {})[k.slice(2)] : b.properties[k])).forEach(v => { if (v != null && v !== '') c.set(v, (c.get(v) || 0) + 1); });
+    return [...c].sort((x, y) => y[1] - x[1]); };
   function addCond(key, op, val) {
     const row = document.createElement('div'); row.className = 'k-cond';
     const fs = document.createElement('select'); fs.setAttribute('aria-label', 'Field'); fieldOpts().forEach(([k, l]) => fs.add(new Option(l, k)));
-    const os = document.createElement('select'); os.setAttribute('aria-label', 'Test'); ['>', '>=', '<', '<=', '=', '!='].forEach(x => os.add(new Option(x, x)));
-    const vi = document.createElement('input'); vi.setAttribute('aria-label', 'Value'); vi.inputMode = 'decimal';
     const x = document.createElement('button'); x.type = 'button'; x.className = 'x'; x.textContent = '×'; x.setAttribute('aria-label', 'Remove'); x.onclick = () => row.remove();
-    fs.value = key || (tgt === 'b' ? 'fs' : 'a.pct_ber_e_to_g'); os.value = op || '<='; vi.value = val ?? (tgt === 'b' ? 3 : 50);
-    row.append(fs, os, vi, x); $('#conds').append(row);
+    let os, vi;
+    const shape = (o, v) => {
+      const f = fdef(fs.value) || {}, cat = f.t === 'cat';
+      os = document.createElement('select'); os.setAttribute('aria-label', 'Test'); (cat ? OPS_CAT : OPS_NUM).forEach(([v2, l]) => os.add(new Option(l, v2)));
+      if (cat) { vi = document.createElement('select'); catVals(fs.value).forEach(([v2, n]) => vi.add(new Option(`${v2} (${fmtN(n)})`, v2))); }
+      else { vi = document.createElement('input'); vi.inputMode = 'decimal'; vi.placeholder = f.unit || 'number'; }
+      vi.setAttribute('aria-label', 'Value');
+      os.value = o || (cat ? '=' : '<='); if (v != null) vi.value = v;
+      if (cat && !vi.value && vi.options.length) vi.selectedIndex = 0;
+      row.replaceChildren(fs, os, vi, x); row.classList.toggle('k-cond-cat', cat);
+    };
+    fs.value = key || (tgt === 'b' ? 'fs' : 'a.pct_ber_e_to_g');
+    shape(op, val ?? (tgt === 'b' ? (key ? null : 3) : 50));
+    fs.onchange = () => { touch(); shape(); };
+    $('#conds').append(row);
   }
+  const condText = c => { const f = fdef(c.field) || {}, ops = (f.t === 'cat' ? OPS_CAT : OPS_NUM); return `${f.l || c.field} ${(ops.find(o => o[0] === c.op) || [, c.op])[1]} ${c.value}${f.t !== 'cat' && f.unit ? (f.unit === '%' ? '%' : ' ' + f.unit) : ''}`; };
   const setTgt = t => { tgt = t; $('#tgtB').setAttribute('aria-pressed', t === 'b'); $('#tgtA').setAttribute('aria-pressed', t === 'a'); $('#conds').innerHTML = ''; addCond(); };
   $('#tgtB').onclick = () => { touch(); setTgt('b'); }; $('#tgtA').onclick = () => { touch(); setTgt('a'); };
   $('#addCond').onclick = () => { touch(); addCond(); };
   $('#runQ').onclick = () => {
     touch();
     const q = { target: tgt, conditions: [...document.querySelectorAll('.k-cond')].map(r => { const [f, o, v] = r.querySelectorAll('select,input'); return { field: f.value, op: o.value, value: v.value }; }) };
-    const r = run(D, q); K.preset = -1; K.query = { tgt: r.tgt, label: 'your question' }; K.flood = false; showFlood(); setLit(r.tgt, r.ids); showResult(r, 'your question');
+    const label = q.conditions.map(condText).join(' and ');
+    const r = run(D, q); K.preset = -1; K.query = { tgt: r.tgt, label }; K.flood = false; showFlood(); setLit(r.tgt, r.ids); showResult(r, label);
     document.querySelectorAll('.k-preset').forEach(b => b.setAttribute('aria-pressed', 'false')); showLayers(); sendState();
   };
   $('#clearQ').onclick = () => { touch(); K.query = null; K.preset = -1; setLit('b', []); $('#result').innerHTML = '<span class="k-dim">Pick a question. The answer lights up on the model.</span>'; document.querySelectorAll('.k-preset').forEach(b => b.setAttribute('aria-pressed', 'false')); showLayers(); sendState(); };
