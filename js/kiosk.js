@@ -49,6 +49,7 @@
   const UT = await AW.utilities();
   Object.values(UT).forEach(u => LAYERS.push({ id: u.id, n: u.name, s: u.sub, col: u.col, on: false }));
   const PL = await AW.planning(); if (PL) LAYERS.push({ id: 'planning', n: 'Planning permissions', s: 'Granted since 2017, year by year', col: AW.PLAN.homes[0], on: false });
+  const RG = await AW.registers(); if (RG) LAYERS.push({ id: 'land', n: 'Vacant and zoned land', s: 'Council registers: vacant sites, land for housing', col: AW.VACANT[0], on: false });
   const SH = await AW.shoreline(); if (SH) LAYERS.push({ id: 'shore', n: 'Shoreline of the docks', s: 'Land won from the sea, 1837 to today', col: AW.SHORE.after_1910[0], on: false });
   const NA = await AW.nature(); if (NA) LAYERS.push({ id: 'nature', n: 'Protected nature sites', s: 'SAC, SPA and pNHA (NPWS)', col: AW.NATURE.sac[0], on: false });
   const NH = await AW.niah(); if (NH) LAYERS.push({ id: 'niah', n: 'Architectural heritage', s: 'NIAH buildings, by rating', col: AW.NIAH.National[0], on: false });
@@ -198,6 +199,15 @@
     if (!on) return; if (K.planY >= PL.last) K.planY = PL.first - 1;
     planTimer = setInterval(() => { touch(); K.planY++; if (K.planY >= PL.last) { K.planY = PL.last; planPlay(false); } $('#planY').value = K.planY; planShow(); legend(); sendState(); }, 1300);
   }
+  if (RG) {                                                          // land registers: RZLT parcels filled by zone, vacant sites outlined on top
+    const zf = []; RG.rzlt.forEach((p, i) => p.rings.forEach(poly => zf.push({ type: 'Feature', properties: { i, col: AW.RZLT[p.k][0] }, geometry: { type: 'Polygon', coordinates: poly.map(r => r.map(([e, n]) => fromITM(e, n))) } })));
+    const vf = []; RG.vacant.forEach((v, i) => v.rings.forEach(poly => vf.push({ type: 'Feature', properties: { i, ref: v.ref.replace('SL-VS-', 'VS ') }, geometry: { type: 'Polygon', coordinates: poly.map(r => r.map(([e, n]) => fromITM(e, n))) } })));
+    map.addSource('rzlt', { type: 'geojson', data: { type: 'FeatureCollection', features: zf } });
+    map.addSource('vacant', { type: 'geojson', data: { type: 'FeatureCollection', features: vf } });
+    map.addLayer({ id: 'rzlt', type: 'fill', source: 'rzlt', layout: { visibility: 'none' }, paint: { 'fill-color': ['get', 'col'], 'fill-opacity': .45 } }, 'b');
+    map.addLayer({ id: 'vacant', type: 'fill', source: 'vacant', layout: { visibility: 'none' }, paint: { 'fill-color': AW.VACANT[0], 'fill-opacity': .35 } });
+    map.addLayer({ id: 'vacant-l', type: 'line', source: 'vacant', layout: { visibility: 'none' }, paint: { 'line-color': AW.VACANT[0], 'line-width': 3 } });
+  }
   if (SH) {                                                          // shoreline: reclaimed land by period, high-water lines 1837, 1910, 2023
     const pf = []; SH.periods.forEach((p, i) => p.rings.forEach(poly => pf.push({ type: 'Feature', properties: { i, col: AW.SHORE[p.k][0] }, geometry: { type: 'Polygon', coordinates: poly.map(r => r.map(([e, n]) => fromITM(e, n))) } })));
     map.addSource('shore', { type: 'geojson', data: { type: 'FeatureCollection', features: pf } });
@@ -277,7 +287,7 @@
     const vis = (id, on) => map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
     vis('roads', K.layers.roads); vis('water', K.layers.water); vis('zoning', K.layers.zoning); vis('mon', K.layers.mon);
     vis('scheme', K.layers.scheme); vis('opw', K.layers.opw); vis('tiles', K.layers.grid); vis('hs', true); map.setPaintProperty('hs', 'raster-opacity', K.layers.relief ? .8 : .45);
-    vis('area-fill', K.layers.areas); trafficTick(); Object.values(UT).forEach(u => { vis(u.id, K.layers[u.id]); vis(u.id + '-flow', K.layers[u.id]); if (map.getLayer(u.id + '-out')) vis(u.id + '-out', K.layers[u.id]); if (map.getLayer(u.id + '-plant')) vis(u.id + '-plant', K.layers[u.id]); ['-zone', '-zone-l', '-tank'].forEach(x => { if (map.getLayer(u.id + x)) vis(u.id + x, K.layers[u.id]); }); }); if (CY) { vis('cycle', K.layers.cycle); vis('cycle-park', K.layers.cycle); } planShow(); if (PW) ['power', 'power-cov', 'power-l', 'power-s'].forEach(id => vis(id, K.layers.power)); if (NH) ['niah', 'niah-pt'].forEach(id => vis(id, K.layers.niah)); if (NA) ['nature-sac', 'nature-sac-l', 'nature-spa', 'nature-nha'].forEach(id => vis(id, K.layers.nature)); if (SH) ['shore', 'shore-l', 'shore-l37'].forEach(id => vis(id, K.layers.shore)); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses && !K.layers.traffic; busTick();
+    vis('area-fill', K.layers.areas); trafficTick(); Object.values(UT).forEach(u => { vis(u.id, K.layers[u.id]); vis(u.id + '-flow', K.layers[u.id]); if (map.getLayer(u.id + '-out')) vis(u.id + '-out', K.layers[u.id]); if (map.getLayer(u.id + '-plant')) vis(u.id + '-plant', K.layers[u.id]); ['-zone', '-zone-l', '-tank'].forEach(x => { if (map.getLayer(u.id + x)) vis(u.id + x, K.layers[u.id]); }); }); if (CY) { vis('cycle', K.layers.cycle); vis('cycle-park', K.layers.cycle); } planShow(); if (PW) ['power', 'power-cov', 'power-l', 'power-s'].forEach(id => vis(id, K.layers.power)); if (NH) ['niah', 'niah-pt'].forEach(id => vis(id, K.layers.niah)); if (NA) ['nature-sac', 'nature-sac-l', 'nature-spa', 'nature-nha'].forEach(id => vis(id, K.layers.nature)); if (SH) ['shore', 'shore-l', 'shore-l37'].forEach(id => vis(id, K.layers.shore)); if (RG) ['rzlt', 'vacant', 'vacant-l'].forEach(id => vis(id, K.layers.land)); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses && !K.layers.traffic; busTick();
     if (K.layers.areas) { const cm = areaColours(D.A, K.areaKey), pairs = []; D.A.forEach(a => { const c = cm.get(a.properties[K.areaKey]); if (c) pairs.push(a.properties.sa_pub2022, c); });
       map.setPaintProperty('area-fill', 'fill-color', pairs.length ? ['match', ['get', 'sa_pub2022'], ...pairs, 'rgba(0,0,0,0)'] : 'rgba(0,0,0,0)'); }
     legend();
@@ -302,6 +312,7 @@
       const s0 = PW.pts.filter(p => (p.k === 'sub' || p.k === 'tx') && p.fz).length, s1 = PW.pts.filter(p => (p.k === 'sub' || p.k === 'tx') && p.fz1).length;
       L.push(['#ff3b30', `Red ring: in today's 1-in-100-year flood zone (${s0} substations and transformers)`]); L.push(['#7aa7ff', `Blue ring: reached with the sea 1 m higher (${s1} in all)`]);
     }
+    if (K.layers.land && RG) { L.push([AW.VACANT[0], `${AW.VACANT[1]}: ${RG.vacant.length} sites, ${fmtN(RG.vacant.reduce((t, v) => t + v.ha, 0), 1)} ha`]); Object.entries(AW.RZLT).forEach(([k, [c, n]]) => { const ps = RG.rzlt.filter(p => p.k === k); if (ps.length) L.push([c, `${n} (RZLT 2026): ${fmtN(ps.reduce((t, p) => t + p.ha, 0), 1)} ha`]); }); }
     if (K.layers.shore && SH) { SH.periods.forEach(p => L.push([AW.SHORE[p.k][0], `${AW.SHORE[p.k][1]}: ${fmtN(p.ha, 1)} ha`])); SH.lines.forEach(l => L.push([AW.SHORELINE[l.k][0], AW.SHORELINE[l.k][1] + (l.k === '2023' ? ' (Tailte Éireann)' : ' (Ordnance Survey, traced)')])); }
     if (K.layers.nature && NA) NA.sites.forEach(st => L.push([AW.NATURE[st.k][0], `${AW.NATURE[st.k][1]}: ${st.name}, ${fmtN(st.hain)} ha in the circle`]));
     if (K.layers.planning && PL) Object.entries(AW.PLAN).forEach(([k, [c, n]]) => L.push([c, n]));
@@ -412,7 +423,7 @@
   // ---------------------------------------------------------------- 03 layers
   // grouped, and by default one layer at a time over the roads and water, so the white model never turns to noise
   const GROUPS = [['Water and drainage', ['water', 'shore', 'opw', 'sewer', 'watermains']], ['Getting around', ['roads', 'buses', 'traffic', 'cycle']],
-    ['Town and growth', ['areas', 'zoning', 'planning', 'scheme']], ['Energy', ['power']], ['Heritage and nature', ['niah', 'mon', 'nature']], ['The model', ['relief', 'grid']]];
+    ['Town and growth', ['areas', 'zoning', 'land', 'planning', 'scheme']], ['Energy', ['power']], ['Heritage and nature', ['niah', 'mon', 'nature']], ['The model', ['relief', 'grid']]];
   const BASE = new Set(['roads', 'water']);
   const placed = new Set(GROUPS.flatMap(g => g[1]));
   const extra = LAYERS.filter(l => !placed.has(l.id)).map(l => l.id); if (extra.length) GROUPS.push(['More', extra]);
@@ -514,6 +525,22 @@
       if (qs) { const st = PW.subs[qs.properties.i]; $('#insp').innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>${esc(st.name)}</h3><span class="k-dim">ESB Networks · ${esc(st.v || 'voltage not recorded')}</span><p class="k-small" style="margin-top:8px">${st.fz ? 'Inside today\'s OPW 1-in-100-year flood zone.' : st.fz1 ? 'Reached by a 1-in-100-year sea flood with the sea 1 m higher.' : 'Outside the OPW flood zones, today and with the sea 1 m higher.'}</p><p class="k-small k-dim">From OpenStreetMap.</p>`; $('#insp').hidden = false; $('#insp .x').onclick = () => { $('#insp').hidden = true; }; return; }
       const q = map.queryRenderedFeatures(e.point, { layers: ['power'] })[0];
       if (q) { const p = PW.pts[q.properties.i]; $('#insp').innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>${esc(PW.kinds[p.k])}</h3>${p.fz ? '<p class="k-small" style="color:#ff8a80">Inside today\'s OPW 1-in-100-year flood zone.</p>' : p.fz1 ? '<p class="k-small" style="color:#9ec9ff">Reached by a 1-in-100-year sea flood with the sea 1 m higher (about 2100).</p>' : (p.k === 'sub' || p.k === 'tx' || p.k === 'gen') ? '<p class="k-small k-dim">Outside the mapped flood zones.</p>' : ''}<p class="k-small k-dim">From OpenStreetMap and Tailte Éireann 1:1000 mapping.</p>`; $('#insp').hidden = false; $('#insp .x').onclick = () => { $('#insp').hidden = true; }; return; }
+    }
+    if (RG && K.layers.land) {
+      const qv = map.queryRenderedFeatures(e.point, { layers: ['vacant'] })[0];
+      if (qv) { const v = RG.vacant[qv.properties.i];
+        $('#insp').innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>Vacant site ${esc(v.ref)}</h3><span class="k-dim"><i style="display:inline-block;width:10px;height:10px;background:${AW.VACANT[0]};border-radius:2px"></i> ${esc(v.addr)} · ${fmtN(v.ha, 2)} ha</span>
+          ${kv([['On the register since', new Date(v.date).toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' })], ['Market valuation (register)', '€' + fmtN(v.value)]])}
+          ${v.fz ? '<p class="k-small" style="color:#9ec9ff">Partly inside today\'s OPW 1-in-100-year flood zone.</p>' : v.fz1 ? '<p class="k-small" style="color:#9ec9ff">Partly reached by a 1-in-100-year sea flood with the sea 1 m higher (about 2100).</p>' : ''}
+          <p class="k-small k-dim">Sligo County Council Vacant Sites Register (Urban Regeneration and Housing Act 2015), updated October 2024. Outline traced from the Council's site map.</p>`;
+        $('#insp').hidden = false; $('#insp .x').onclick = () => { $('#insp').hidden = true; }; return; }
+      const qz = map.queryRenderedFeatures(e.point, { layers: ['rzlt'] })[0];
+      if (qz) { const p = RG.rzlt[qz.properties.i];
+        $('#insp').innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>Zoned land for housing</h3><span class="k-dim"><i style="display:inline-block;width:10px;height:10px;background:${AW.RZLT[p.k][0]};border-radius:2px"></i> ${esc(AW.RZLT[p.k][1])} · ${fmtN(p.ha, 2)} ha</span>
+          <p class="k-small" style="margin:8px 0">${esc(p.zd || '')}</p>
+          ${p.fz ? '<p class="k-small" style="color:#9ec9ff">Partly inside today\'s OPW 1-in-100-year flood zone.</p>' : p.fz1 ? '<p class="k-small" style="color:#9ec9ff">Partly reached by a 1-in-100-year sea flood with the sea 1 m higher (about 2100).</p>' : ''}
+          <p class="k-small k-dim">Residential Zoned Land Tax final map 2026, parcel ${esc(p.id)} (Department of Housing open data, CC BY 4.0): land zoned and serviced for housing, in scope of the tax unless exempt.</p>`;
+        $('#insp').hidden = false; $('#insp .x').onclick = () => { $('#insp').hidden = true; }; return; }
     }
     if (SH && K.layers.shore) { const q = map.queryRenderedFeatures(e.point, { layers: ['shore'] })[0];
       if (q) { const p = SH.periods[q.properties.i], W = { pre1837: 'On the 1837 survey a wall already ran out across the foreshore; inside it the surveyors drew the older shore and named it the Enclosed Water Mark.', '1837_1910': 'By the 1910 survey the railway ran out on this causeway to the Deepwater Berths Quay. The Upper Flat behind it was still mud at high tide.', after_1910: 'Mud at high tide on the 1910 and 1940 surveys. Filled from about 1958 by the Harbour Commissioners, then as the Council landfill from 1977 to 1994.' }[p.k];
@@ -664,6 +691,10 @@
       const ys = []; for (let y = PL.first; y <= PL.last; y++) ys.push([String(y), by[y] || 0, y === K.planY]);
       return { h: K.planOnly ? `Planning permissions in ${K.planY}` : `Planning permissions, 2017 to ${K.planY}`, text: 'Planning permissions granted by Sligo County Council, coloured by what they are for. A permission is not a building started, but it shows where the town means to grow, and how much of that is near the water.',
         stats: [st(g.length, 'permissions', 1), st(g.reduce((t, a) => t + a.h, 0), 'new homes permitted'), st(g.filter(a => a.fz).length, 'sites in today\'s flood zones')], chart: { title: 'New homes permitted each year', bars: ys } }; },
+    land: () => { const vh = RG.vacant.reduce((t, v) => t + v.ha, 0), ha = k => RG.rzlt.filter(p => p.k === k).reduce((t, p) => t + p.ha, 0), all = RG.rzlt.reduce((t, p) => t + p.ha, 0);
+      return { h: 'Land waiting to be built on', text: `Red: the ${RG.vacant.length} sites on Sligo County Council's Vacant Sites Register, land zoned for housing or regeneration that has lain idle. Coloured: the land the Residential Zoned Land Tax map counts as zoned and serviced for housing in 2026. Some of it lies where the water arrives.`,
+        stats: [st(RG.vacant.length, `vacant sites, ${fmtN(vh, 1)} ha`, 1), st(fmtN(all) + ' ha', 'zoned for housing (RZLT 2026)'), st(fmtN(ha('new'), 1) + ' ha', 'of it new residential land'), st(RG.rzlt.filter(p => p.fz1).length, 'zoned parcels in the +1 m sea flood zone')],
+        chart: { title: 'Zoned land for housing, hectares', bars: Object.entries(AW.RZLT).map(([k, [, n]]) => [n.replace(' land', '').replace('Existing residential and infill', 'Infill').replace('Mixed-use and neighbourhood centre', 'Mixed use'), Math.round(ha(k) * 10) / 10, false]) } }; },
     shore: () => { const tot = SH.periods.reduce((t, p) => t + p.ha, 0), lab = { pre1837: 'Before 1837', '1837_1910': '1837–1910', after_1910: 'After 1940' };
       return { h: 'Where the docks came from', text: `About ${fmtN(tot)} ha of the docks was sea or mudflat at high tide. A wall came first, before 1837, then a railway causeway to the Deepwater Berths by 1910. The Upper Flat behind it was filled from about 1958, much of it as the town's landfill. Dashed: the 1837 shore; red: 1910; blue: today.`,
         stats: SH.periods.map(p => st(fmtN(p.ha, 1) + ' ha', `${lab[p.k].toLowerCase()}; ${p.flood['0']}% in the flood zone today`, p.k === 'pre1837')).concat([st(SH.periods.reduce((t, p) => t + p.n, 0), 'buildings on reclaimed land')]),

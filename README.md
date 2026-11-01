@@ -33,6 +33,9 @@ The **Traffic** layer is **live TomTom flow** (style `relative`, zoom 15, refres
 ## Electricity
 `tools/make_electric.py` merges an Overpass export of OpenStreetMap power features (lines with voltage, ESB substations, transformers, solar panels, poles) with points read from the Tailte Éireann PRIME2 1:1000 DWG sheets (local substations, transformer poles, pylons, poles; converted with LibreDWG, see `PRIME2_utility_points_ITM.csv`) into `data/electric.json`, flagging substations and transformers in today's OPW flood zones and with the sea 1 m higher.
 
+## Vacant and zoned land
+`tools/make_registers.py` writes `data/registers.json` from two Sligo County Council registers: the Vacant Sites Register (updated October 2024, 14 sites; outlines traced from the Council's scanned 1:2500 site maps, each registered to the building footprints and roads) and the Residential Zoned Land Tax final map for 2026 (Department of Housing open data, CC BY 4.0). Sites and parcels are flagged where they meet today's OPW 1-in-100-year flood zones or the sea 1 m higher. The Derelict Sites Register is not published as data.
+
 ## Shoreline of the docks
 `tools/make_shoreline.py` takes the docks history files (`docks_change_itm.geojson`, `docks_change_wgs84.geojson`; traced from the Ordnance Survey 1837 and 1910 sheets, with Tailte Éireann's 2023 high-water mark where the shore has not moved) and writes `data/shoreline.json`: the land won from the sea before 1837 (behind the Ballast Wall, 4.4 ha), 1837–1910 (the Deepwater causeway, 2.1 ha) and after 1940 (the Upper Flat, 28.3 ha), with the share of each in the OPW coastal flood zones, and the high-water lines of 1837, 1910 and 2023. Buildings get `rc` (1, 2 or 3) for the period of the land they stand on.
 

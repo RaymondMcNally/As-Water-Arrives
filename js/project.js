@@ -55,7 +55,7 @@
     rigs: {},                               // per set-up: [{ h, nx, ny, pins }] lens height (mm), lens offset from Lady Erin (mm, +east/+north), pins (screen 0–1)
     base: 9, datum: -3, vex: 1,             // how the tiles were printed: base slab (mm), datum (m OD) and ground exaggeration
     cal: false, test: false, follow: true, bright: 1,
-    layers: { roads: true, water: true, areas: false, zoning: false, mon: false, scheme: false, relief: false, grid: false, opw: false, buses: false, traffic: false, sewer: false, watermains: false, cycle: false, planning: false, nature: false, power: false, niah: false, shore: false },
+    layers: { roads: true, water: true, areas: false, zoning: false, mon: false, scheme: false, relief: false, grid: false, opw: false, buses: false, traffic: false, sewer: false, watermains: false, cycle: false, planning: false, nature: false, power: false, niah: false, shore: false, land: false },
     kiosk: null                             // last state from the kiosk
   };
   let edit = 0;                             // the projector the control page is calibrating
@@ -91,6 +91,7 @@
   const PLN = await AW.planning();
   const NAT = await AW.nature();
   const SHO = await AW.shoreline();
+  const REG = await AW.registers();
   const PWR = await AW.power();
   const NIA = await AW.niah();
   const TT = AW.traffic; getJSON('exhibition/config.json').then(c => TT.setConfigKey(c.tomtomKey)).catch(() => { });
@@ -153,6 +154,10 @@
         tx.lineCap = 'round'; tx.lineJoin = 'round';
         ['shared', 'lane', 'path', 'track'].forEach(kd => { tx.strokeStyle = AW.CYCLE[kd][0]; tx.lineWidth = (kd === 'track' ? 10 : 8) * k; tx.beginPath(); CYC.lines.forEach(l => { if (l.k !== kd) return; l.xy.forEach(([E, N], i) => { const [a, b] = P(E, N); i ? tx.lineTo(a, b) : tx.moveTo(a, b); }); }); tx.stroke(); });
         tx.fillStyle = '#ffffff'; CYC.parking.forEach(([E, N]) => { const [a, b] = P(E, N); tx.beginPath(); tx.arc(a, b, 6 * k, 0, 7); tx.fill(); });
+      }
+      if (L.land && REG) {                                              // land registers: RZLT parcels by zone, vacant sites with a thick outline
+        REG.rzlt.forEach(p => p.rings.forEach(poly => fill({ type: 'Polygon', coordinates: poly }, AW.RZLT[p.k][0], .5)));
+        REG.vacant.forEach(v => v.rings.forEach(poly => { const g = { type: 'Polygon', coordinates: poly }; fill(g, AW.VACANT[0], .45); tx.strokeStyle = AW.VACANT[0]; tx.lineWidth = 7 * k; tx.beginPath(); path(g); tx.stroke(); }));
       }
       if (L.shore && SHO) {                                             // land won from the sea by period; high-water lines 1837 (dashed), 1910, 2023
         SHO.periods.forEach(p => p.rings.forEach(poly => { const g = { type: 'Polygon', coordinates: poly }; fill(g, AW.SHORE[p.k][0], .55); }));
@@ -429,7 +434,7 @@
   $('#follow').onchange = e => { S.follow = e.target.checked; changed(); showKiosk(); };
   $('#bright').oninput = e => { S.bright = +e.target.value / 100; changed(); };
   $('#resetPins').onclick = () => { const m = mode(), i = Math.min(edit, S.n - 1); S.rigs[m][i] = freshRig(m, i); calChanged(true); syncUI(); };
-  const LBL = { roads: 'Roads', water: 'Water today', areas: 'Census areas', zoning: 'Zoning', mon: 'Recorded monuments', scheme: 'Proposed river crossing', relief: 'Shaded relief', grid: 'Tile grid', opw: 'OPW flood maps', buses: 'Town buses (timetable)', traffic: 'Traffic (live with a TomTom key, otherwise typical)', sewer: 'Sewers (2008)', watermains: 'Water mains', cycle: 'Cycle routes', planning: 'Planning permissions', nature: 'Protected nature sites', shore: 'Shoreline of the docks (1837, 1910, 2023)', power: 'Electricity', niah: 'Architectural heritage (NIAH)' };
+  const LBL = { roads: 'Roads', water: 'Water today', areas: 'Census areas', zoning: 'Zoning', mon: 'Recorded monuments', scheme: 'Proposed river crossing', relief: 'Shaded relief', grid: 'Tile grid', opw: 'OPW flood maps', buses: 'Town buses (timetable)', traffic: 'Traffic (live with a TomTom key, otherwise typical)', sewer: 'Sewers (2008)', watermains: 'Water mains', cycle: 'Cycle routes', planning: 'Planning permissions', nature: 'Protected nature sites', shore: 'Shoreline of the docks (1837, 1910, 2023)', land: 'Vacant and zoned land (Council registers)', power: 'Electricity', niah: 'Architectural heritage (NIAH)' };
   $('#layers').innerHTML = Object.keys(S.layers).filter(k2 => !(k2 in { sewer: 1, watermains: 1 }) || UT[k2]).map(k2 => `<label class="row"><input type="checkbox" data-l="${k2}"> ${LBL[k2]}</label>`).join('');
   $('#layers').querySelectorAll('[data-l]').forEach(c => c.onchange = () => { S.layers[c.dataset.l] = c.checked; changed(); });
   const STEPS = {

@@ -24,6 +24,15 @@
     J.shown = (y, only) => J.apps.filter(a => a.dec === 'granted' && (only ? Math.max(a.y, J.first) === y : a.y <= y));
     return J;
   };
+  // Sligo County Council land registers (data/registers.json): Vacant Sites Register (2024) and the Residential Zoned Land Tax map (2026)
+  AW.VACANT = ['#ff2e63', 'Vacant Sites Register (Sligo County Council, 2024)'];
+  AW.RZLT = { new: ['#ffd166', 'New residential land'], infill: ['#b39ddb', 'Existing residential and infill land'], centre: ['#ff9f43', 'Town centre land'], mixed: ['#4dd0e1', 'Mixed-use and neighbourhood centre land'] };
+  AW.registers = async function () {
+    const J = await AW.getJSON('data/registers.json').catch(() => null); if (!J) return null;
+    const xy = c => { const o = []; for (let i = 0; i < c.length; i += 2) o.push([c[i], c[i + 1]]); return o; };
+    J.vacant.forEach(v => { v.rings = v.r.map(p => p.map(xy)); }); J.rzlt.forEach(p => { p.rings = p.r.map(q => q.map(xy)); });
+    return J;
+  };
   // shoreline of the docks (data/shoreline.json): land won from the sea by period, and the high-water lines of 1837, 1910 and 2023
   AW.SHORE = { pre1837: ['#e3a54a', 'Enclosed behind the Ballast Wall, before 1837'], '1837_1910': ['#ff6b5a', 'Railway causeway and Deepwater Quay, 1837–1910'], after_1910: ['#4cc08f', 'The Upper Flat, filled after 1940'] };
   AW.SHORELINE = { 1837: ['#e3a54a', 'High water, 1837', [6, 4]], 1910: ['#ff6b5a', 'High water, 1910', []], 2023: ['#5aa2ff', 'High water, 2023', []] };
