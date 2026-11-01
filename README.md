@@ -26,6 +26,9 @@ The **Traffic** layer shows **typical traffic** on the main roads for the time o
 ## Sea-level rise
 `tools/make_opw_future.py` clips the OPW's national coastal flood maps (2021: present day, and future scenarios +0.5 to +2.0 m for about 2100) and the river's mid-range and high-end future extents to the circle (`data/opw_future.json`) and gives each building the smallest rise that reaches it (`cf2`, `cf20`, `cf100`) and its future river band (`om`, `oh`). The kiosk's **Sea-level rise** choice steps through them.
 
+## Electricity
+`tools/make_electric.py` merges an Overpass export of OpenStreetMap power features (lines with voltage, ESB substations, transformers, solar panels, poles) with points read from the Tailte Éireann PRIME2 1:1000 DWG sheets (local substations, transformer poles, pylons, poles; converted with LibreDWG, see `PRIME2_utility_points_ITM.csv`) into `data/electric.json`, flagging substations and transformers in today's OPW flood zones and with the sea 1 m higher.
+
 ## Protected nature sites
 `tools/make_protected.py` clips the NPWS SAC, SPA, NHA and pNHA boundaries (cut to Sligo as GeoJSON) to the model (`data/protected.json`) and gives buildings and planning sites `pz`, the distance to the nearest SAC or SPA up to 200 m. The Garavogue is part of Lough Gill SAC, so much of the town centre is within 50 m of a European site.
 

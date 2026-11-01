@@ -32,6 +32,19 @@
     return J;
   };
   AW.SUPPLY = { FOX: '#3a86ff', K: '#ff9f1c', C: '#2ec4b6', F: '#c77dff' };           // water supply zones by source
+  // electricity network points (data/electric.json): substations, transformer poles, pylons, poles
+  // electricity (data/electric.json): OSM lines by voltage and ESB substations; points from OSM and Tailte Éireann mapping
+  AW.POWER = { sub: ['#ffd60a', 'Local substations (mini-pillars and kiosks)'], tx: ['#ff9f1c', 'Transformers'], gen: ['#7bdff2', 'Solar panels'], pylon: ['#ff5d8f', 'ESB pylons'], pole: ['#cfd8dc', 'Electricity poles'] };
+  AW.VOLT = { '110kv': ['#ff0054', '110 kV line'], '38kv': ['#ff5d8f', '38 kV line'], mv: ['#ffd60a', '10 kV line'], lv: ['#cfd8dc', 'Low-voltage line'], unknown: ['#ffe8a3', 'Line, voltage not recorded'] };
+  AW.power = async function () {
+    const J = await AW.getJSON('data/electric.json').catch(() => null); if (!J) return null;
+    const xy = c => { const o = []; for (let i = 0; i < c.length; i += 2) o.push([c[i], c[i + 1]]); return o; };
+    J.pts = J.points.map(([k, x, y, fz, fz1]) => ({ k, x, y, fz, fz1 }));
+    J.cov = (J.coverage || []).map(xy);
+    (J.lines || []).forEach(l => { l.xy = xy(l.c); });
+    (J.subs || []).forEach(s => { if (s.r) s.ring = xy(s.r); });
+    return J;
+  };
   AW.utilities = async function () {
     const out = {};
     await Promise.all(Object.entries(NETS).map(async ([k, n]) => {

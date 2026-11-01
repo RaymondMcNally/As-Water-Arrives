@@ -55,7 +55,7 @@
     rigs: {},                               // per set-up: [{ h, nx, ny, pins }] lens height (mm), lens offset from Lady Erin (mm, +east/+north), pins (screen 0–1)
     base: 9, datum: -3, vex: 1,             // how the tiles were printed: base slab (mm), datum (m OD) and ground exaggeration
     cal: false, test: false, follow: true, bright: 1,
-    layers: { roads: true, water: true, areas: false, zoning: false, mon: false, scheme: false, relief: false, grid: false, opw: false, buses: false, traffic: false, sewer: false, watermains: false, cycle: false, planning: false, nature: false },
+    layers: { roads: true, water: true, areas: false, zoning: false, mon: false, scheme: false, relief: false, grid: false, opw: false, buses: false, traffic: false, sewer: false, watermains: false, cycle: false, planning: false, nature: false, power: false },
     kiosk: null                             // last state from the kiosk
   };
   let edit = 0;                             // the projector the control page is calibrating
@@ -90,6 +90,7 @@
   const CYC = await AW.cycling();
   const PLN = await AW.planning();
   const NAT = await AW.nature();
+  const PWR = await AW.power();
   const TT = AW.traffic; getJSON('exhibition/config.json').then(c => TT.setConfigKey(c.tomtomKey)).catch(() => { });
   const CIRC = MJ.circle.coordinates[0], TBOX = [Math.min(...CIRC.map(c => c[0])), Math.min(...CIRC.map(c => c[1])), Math.max(...CIRC.map(c => c[0])), Math.max(...CIRC.map(c => c[1]))];
   let TR = null, trB = -1, trBusy = false;
@@ -124,7 +125,7 @@
       if (L.opw) [1, 5, 10].forEach(a => { const o = OPW.find(x => x.p.level === a); if (o) fill(o.g, Q.C.opwBands[a], .95); });
       if (fl) { const f = F.find(x => x.p.src === fl.src && x.p.level === fl.level && (fl.src !== 'coast' || x.p.rp === fl.rp) && (fl.src !== 'opw' || (x.p.fut || 'now') === (fl.fut || 'now'))); if (f) { fill(f.g, fl.src === 'sea' ? '#3fa9f5' : fl.src === 'lake' ? '#36c6d3' : fl.src === 'coast' ? Q.C.coast : Q.C.opw, .95); tx.strokeStyle = '#d8f1ff'; tx.lineWidth = 3; tx.beginPath(); path(f.g); tx.stroke(); } }
       const trOn = L.traffic && TR && TR.ok && !(ks && ks.busFast);
-      if (L.roads) { tx.globalAlpha = L.traffic || L.cycle ? .35 : 1; tx.strokeStyle = '#ffffff'; tx.lineCap = 'round'; tx.lineJoin = 'round'; RD.forEach(r => { const w = RW[r.c]; if (!w) return; tx.lineWidth = w * k; tx.beginPath(); path(r.g); tx.stroke(); }); tx.globalAlpha = 1; }
+      if (L.roads) { tx.globalAlpha = L.traffic || L.cycle || L.power ? .3 : 1; tx.strokeStyle = '#ffffff'; tx.lineCap = 'round'; tx.lineJoin = 'round'; RD.forEach(r => { const w = RW[r.c]; if (!w) return; tx.lineWidth = w * k; tx.beginPath(); path(r.g); tx.stroke(); }); tx.globalAlpha = 1; }
       if (trOn) {                                                        // TomTom tiles, each placed by three of its corners
         tx.imageSmoothingEnabled = true;
         TR.tiles.forEach(t => {
@@ -158,6 +159,20 @@
           else if (st.k === 'spa') { tx.strokeStyle = AW.NATURE.spa[0]; tx.lineWidth = 6 * k; tx.setLineDash([24 * k, 14 * k]); }
           else { tx.strokeStyle = AW.NATURE.pnha[0]; tx.lineWidth = 4 * k; tx.setLineDash([5 * k, 10 * k]); }
           tx.beginPath(); path(g); tx.stroke(); tx.setLineDash([]);
+        }));
+      }
+      if (L.power && PWR) {                                             // electricity: lines by voltage (cables dashed), ESB substations, then points; rings in flood zones
+        tx.lineCap = 'round';
+        ['unknown', 'lv', 'mv', '38kv', '110kv'].forEach(v => (PWR.lines || []).forEach(l => {
+          if (l.v !== v) return; tx.strokeStyle = AW.VOLT[v][0]; tx.lineWidth = (v === '38kv' || v === '110kv' ? 9 : v === 'mv' ? 6.5 : 4.5) * k; tx.setLineDash(l.u ? [8 * k, 8 * k] : []);
+          tx.beginPath(); l.xy.forEach(([E, N], i) => { const [a, b] = P(E, N); i ? tx.lineTo(a, b) : tx.moveTo(a, b); }); tx.stroke();
+        })); tx.setLineDash([]);
+        (PWR.subs || []).forEach(st => { if (st.ring) { fill({ type: 'Polygon', coordinates: [st.ring] }, '#ff5d8f', .9); tx.strokeStyle = '#ffffff'; tx.lineWidth = 3; tx.beginPath(); path({ type: 'Polygon', coordinates: [st.ring] }); tx.stroke(); } });
+        const R0 = { sub: 13, tx: 11, gen: 10, pylon: 7, pole: 5 };
+        ['pole', 'pylon', 'gen', 'tx', 'sub'].forEach(kd => PWR.pts.forEach(p => {
+          if (p.k !== kd) return; const [a, b] = P(p.x, p.y);
+          if (p.fz || p.fz1) { tx.fillStyle = p.fz ? '#ff3b30' : '#7aa7ff'; tx.beginPath(); tx.arc(a, b, (R0[kd] + 5) * k, 0, 7); tx.fill(); }
+          tx.fillStyle = AW.POWER[kd][0]; tx.beginPath(); tx.arc(a, b, R0[kd] * k, 0, 7); tx.fill();
         }));
       }
       if (L.planning && PLN) {                                          // planning permissions granted up to the kiosk's year; that year's brighter
@@ -400,7 +415,7 @@
   $('#follow').onchange = e => { S.follow = e.target.checked; changed(); showKiosk(); };
   $('#bright').oninput = e => { S.bright = +e.target.value / 100; changed(); };
   $('#resetPins').onclick = () => { const m = mode(), i = Math.min(edit, S.n - 1); S.rigs[m][i] = freshRig(m, i); calChanged(true); syncUI(); };
-  const LBL = { roads: 'Roads', water: 'Water today', areas: 'Census areas', zoning: 'Zoning', mon: 'Recorded monuments', scheme: 'Proposed river crossing', relief: 'Shaded relief', grid: 'Tile grid', opw: 'OPW flood maps', buses: 'Town buses (timetable)', traffic: 'Traffic (live with a TomTom key, otherwise typical)', sewer: 'Sewers (2008)', watermains: 'Water mains', cycle: 'Cycle routes', planning: 'Planning permissions', nature: 'Protected nature sites' };
+  const LBL = { roads: 'Roads', water: 'Water today', areas: 'Census areas', zoning: 'Zoning', mon: 'Recorded monuments', scheme: 'Proposed river crossing', relief: 'Shaded relief', grid: 'Tile grid', opw: 'OPW flood maps', buses: 'Town buses (timetable)', traffic: 'Traffic (live with a TomTom key, otherwise typical)', sewer: 'Sewers (2008)', watermains: 'Water mains', cycle: 'Cycle routes', planning: 'Planning permissions', nature: 'Protected nature sites', power: 'Electricity' };
   $('#layers').innerHTML = Object.keys(S.layers).filter(k2 => !(k2 in { sewer: 1, watermains: 1 }) || UT[k2]).map(k2 => `<label class="row"><input type="checkbox" data-l="${k2}"> ${LBL[k2]}</label>`).join('');
   $('#layers').querySelectorAll('[data-l]').forEach(c => c.onchange = () => { S.layers[c.dataset.l] = c.checked; changed(); });
   const STEPS = {
