@@ -24,6 +24,15 @@
     J.shown = (y, only) => J.apps.filter(a => a.dec === 'granted' && (only ? Math.max(a.y, J.first) === y : a.y <= y));
     return J;
   };
+  // shoreline of the docks (data/shoreline.json): land won from the sea by period, and the high-water lines of 1837, 1910 and 2023
+  AW.SHORE = { pre1837: ['#e3a54a', 'Enclosed behind the Ballast Wall, before 1837'], '1837_1910': ['#ff6b5a', 'Railway causeway and Deepwater Quay, 1837–1910'], after_1910: ['#4cc08f', 'The Upper Flat, filled after 1940'] };
+  AW.SHORELINE = { 1837: ['#e3a54a', 'High water, 1837', [6, 4]], 1910: ['#ff6b5a', 'High water, 1910', []], 2023: ['#5aa2ff', 'High water, 2023', []] };
+  AW.shoreline = async function () {
+    const J = await AW.getJSON('data/shoreline.json').catch(() => null); if (!J) return null;
+    const xy = c => { const o = []; for (let i = 0; i < c.length; i += 2) o.push([c[i], c[i + 1]]); return o; };
+    J.periods.forEach(p => { p.rings = p.r.map(poly => poly.map(xy)); }); J.lines.forEach(l => { l.pts = xy(l.xy); });
+    return J;
+  };
   // protected nature sites (data/protected.json)
   AW.NATURE = { sac: ['#5fd38d', 'SAC'], spa: ['#ffa94d', 'SPA'], nha: ['#e8f59a', 'NHA'], pnha: ['#e8f59a', 'pNHA'] };
   AW.nature = async function () {

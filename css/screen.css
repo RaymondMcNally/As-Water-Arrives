@@ -17,7 +17,7 @@ body { font: 400 1.6vw/1.4 var(--f-body) }
 .s-steps i.on { background: var(--acc) }
 .s-clock { margin-left: auto }
 
-.s-words { display: flex; flex-direction: column; min-height: 0 }
+.s-words { display: flex; flex-direction: column; min-height: 0; overflow: hidden }
 .s-words h1 { font: 600 4.3vw/1.04 var(--f-head); letter-spacing: -.015em; margin: 0 0 1.4vw; text-wrap: balance }
 .s-water { font: 500 1.05vw var(--f-mono); letter-spacing: .06em; color: var(--water); margin: 0 0 1vw; text-transform: uppercase }
 .s-text { font-size: 1.85vw; line-height: 1.42; color: #d6e4e3; margin: 0; max-width: 40ch; text-wrap: pretty }

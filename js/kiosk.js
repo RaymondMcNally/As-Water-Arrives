@@ -49,6 +49,7 @@
   const UT = await AW.utilities();
   Object.values(UT).forEach(u => LAYERS.push({ id: u.id, n: u.name, s: u.sub, col: u.col, on: false }));
   const PL = await AW.planning(); if (PL) LAYERS.push({ id: 'planning', n: 'Planning permissions', s: 'Granted since 2017, year by year', col: AW.PLAN.homes[0], on: false });
+  const SH = await AW.shoreline(); if (SH) LAYERS.push({ id: 'shore', n: 'Shoreline of the docks', s: 'Land won from the sea, 1837 to today', col: AW.SHORE.after_1910[0], on: false });
   const NA = await AW.nature(); if (NA) LAYERS.push({ id: 'nature', n: 'Protected nature sites', s: 'SAC, SPA and pNHA (NPWS)', col: AW.NATURE.sac[0], on: false });
   const NH = await AW.niah(); if (NH) LAYERS.push({ id: 'niah', n: 'Architectural heritage', s: 'NIAH buildings, by rating', col: AW.NIAH.National[0], on: false });
   const PW = await AW.power(); if (PW) LAYERS.push({ id: 'power', n: 'Electricity', s: 'Lines, substations, transformers', col: AW.POWER.sub[0], on: false });
@@ -197,6 +198,14 @@
     if (!on) return; if (K.planY >= PL.last) K.planY = PL.first - 1;
     planTimer = setInterval(() => { touch(); K.planY++; if (K.planY >= PL.last) { K.planY = PL.last; planPlay(false); } $('#planY').value = K.planY; planShow(); legend(); sendState(); }, 1300);
   }
+  if (SH) {                                                          // shoreline: reclaimed land by period, high-water lines 1837, 1910, 2023
+    const pf = []; SH.periods.forEach((p, i) => p.rings.forEach(poly => pf.push({ type: 'Feature', properties: { i, col: AW.SHORE[p.k][0] }, geometry: { type: 'Polygon', coordinates: poly.map(r => r.map(([e, n]) => fromITM(e, n))) } })));
+    map.addSource('shore', { type: 'geojson', data: { type: 'FeatureCollection', features: pf } });
+    map.addSource('shore-l', { type: 'geojson', data: { type: 'FeatureCollection', features: SH.lines.map(l => ({ type: 'Feature', properties: { k: l.k, col: AW.SHORELINE[l.k][0] }, geometry: { type: 'LineString', coordinates: l.pts.map(([e, n]) => fromITM(e, n)) } })) } });
+    map.addLayer({ id: 'shore', type: 'fill', source: 'shore', layout: { visibility: 'none' }, paint: { 'fill-color': ['get', 'col'], 'fill-opacity': .5 } }, 'b');
+    map.addLayer({ id: 'shore-l', type: 'line', source: 'shore-l', filter: ['!=', 'k', '1837'], layout: { visibility: 'none', 'line-join': 'round' }, paint: { 'line-color': ['get', 'col'], 'line-width': 2.5 } });
+    map.addLayer({ id: 'shore-l37', type: 'line', source: 'shore-l', filter: ['==', 'k', '1837'], layout: { visibility: 'none', 'line-join': 'round' }, paint: { 'line-color': ['get', 'col'], 'line-width': 2.5, 'line-dasharray': [2, 1.5] } });
+  }
   if (NA) {                                                          // protected sites: SAC filled, SPA dashed outline, pNHA dotted outline
     const feats = []; NA.sites.forEach((st, i) => st.rings.forEach(poly => feats.push({ type: 'Feature', properties: { i, k: st.k }, geometry: { type: 'Polygon', coordinates: poly.map(r => r.map(([e, n]) => fromITM(e, n))) } })));
     map.addSource('nature', { type: 'geojson', data: { type: 'FeatureCollection', features: feats } });
@@ -268,7 +277,7 @@
     const vis = (id, on) => map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
     vis('roads', K.layers.roads); vis('water', K.layers.water); vis('zoning', K.layers.zoning); vis('mon', K.layers.mon);
     vis('scheme', K.layers.scheme); vis('opw', K.layers.opw); vis('tiles', K.layers.grid); vis('hs', true); map.setPaintProperty('hs', 'raster-opacity', K.layers.relief ? .8 : .45);
-    vis('area-fill', K.layers.areas); trafficTick(); Object.values(UT).forEach(u => { vis(u.id, K.layers[u.id]); vis(u.id + '-flow', K.layers[u.id]); if (map.getLayer(u.id + '-out')) vis(u.id + '-out', K.layers[u.id]); if (map.getLayer(u.id + '-plant')) vis(u.id + '-plant', K.layers[u.id]); ['-zone', '-zone-l', '-tank'].forEach(x => { if (map.getLayer(u.id + x)) vis(u.id + x, K.layers[u.id]); }); }); if (CY) { vis('cycle', K.layers.cycle); vis('cycle-park', K.layers.cycle); } planShow(); if (PW) ['power', 'power-cov', 'power-l', 'power-s'].forEach(id => vis(id, K.layers.power)); if (NH) ['niah', 'niah-pt'].forEach(id => vis(id, K.layers.niah)); if (NA) ['nature-sac', 'nature-sac-l', 'nature-spa', 'nature-nha'].forEach(id => vis(id, K.layers.nature)); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses && !K.layers.traffic; busTick();
+    vis('area-fill', K.layers.areas); trafficTick(); Object.values(UT).forEach(u => { vis(u.id, K.layers[u.id]); vis(u.id + '-flow', K.layers[u.id]); if (map.getLayer(u.id + '-out')) vis(u.id + '-out', K.layers[u.id]); if (map.getLayer(u.id + '-plant')) vis(u.id + '-plant', K.layers[u.id]); ['-zone', '-zone-l', '-tank'].forEach(x => { if (map.getLayer(u.id + x)) vis(u.id + x, K.layers[u.id]); }); }); if (CY) { vis('cycle', K.layers.cycle); vis('cycle-park', K.layers.cycle); } planShow(); if (PW) ['power', 'power-cov', 'power-l', 'power-s'].forEach(id => vis(id, K.layers.power)); if (NH) ['niah', 'niah-pt'].forEach(id => vis(id, K.layers.niah)); if (NA) ['nature-sac', 'nature-sac-l', 'nature-spa', 'nature-nha'].forEach(id => vis(id, K.layers.nature)); if (SH) ['shore', 'shore-l', 'shore-l37'].forEach(id => vis(id, K.layers.shore)); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses && !K.layers.traffic; busTick();
     if (K.layers.areas) { const cm = areaColours(D.A, K.areaKey), pairs = []; D.A.forEach(a => { const c = cm.get(a.properties[K.areaKey]); if (c) pairs.push(a.properties.sa_pub2022, c); });
       map.setPaintProperty('area-fill', 'fill-color', pairs.length ? ['match', ['get', 'sa_pub2022'], ...pairs, 'rgba(0,0,0,0)'] : 'rgba(0,0,0,0)'); }
     legend();
@@ -293,6 +302,7 @@
       const s0 = PW.pts.filter(p => (p.k === 'sub' || p.k === 'tx') && p.fz).length, s1 = PW.pts.filter(p => (p.k === 'sub' || p.k === 'tx') && p.fz1).length;
       L.push(['#ff3b30', `Red ring: in today's 1-in-100-year flood zone (${s0} substations and transformers)`]); L.push(['#7aa7ff', `Blue ring: reached with the sea 1 m higher (${s1} in all)`]);
     }
+    if (K.layers.shore && SH) { SH.periods.forEach(p => L.push([AW.SHORE[p.k][0], `${AW.SHORE[p.k][1]}: ${fmtN(p.ha, 1)} ha`])); SH.lines.forEach(l => L.push([AW.SHORELINE[l.k][0], AW.SHORELINE[l.k][1] + (l.k === '2023' ? ' (Tailte Éireann)' : ' (Ordnance Survey, traced)')])); }
     if (K.layers.nature && NA) NA.sites.forEach(st => L.push([AW.NATURE[st.k][0], `${AW.NATURE[st.k][1]}: ${st.name}, ${fmtN(st.hain)} ha in the circle`]));
     if (K.layers.planning && PL) Object.entries(AW.PLAN).forEach(([k, [c, n]]) => L.push([c, n]));
     if (K.layers.buses) BUS.routes.forEach(r => L.push([r.col, `Bus ${r.id}: ${r.name.replace(/ - /g, ' – ')}`]));
@@ -401,7 +411,7 @@
 
   // ---------------------------------------------------------------- 03 layers
   // grouped, and by default one layer at a time over the roads and water, so the white model never turns to noise
-  const GROUPS = [['Water and drainage', ['water', 'opw', 'sewer', 'watermains']], ['Getting around', ['roads', 'buses', 'traffic', 'cycle']],
+  const GROUPS = [['Water and drainage', ['water', 'shore', 'opw', 'sewer', 'watermains']], ['Getting around', ['roads', 'buses', 'traffic', 'cycle']],
     ['Town and growth', ['areas', 'zoning', 'planning', 'scheme']], ['Energy', ['power']], ['Heritage and nature', ['niah', 'mon', 'nature']], ['The model', ['relief', 'grid']]];
   const BASE = new Set(['roads', 'water']);
   const placed = new Set(GROUPS.flatMap(g => g[1]));
@@ -505,6 +515,12 @@
       const q = map.queryRenderedFeatures(e.point, { layers: ['power'] })[0];
       if (q) { const p = PW.pts[q.properties.i]; $('#insp').innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>${esc(PW.kinds[p.k])}</h3>${p.fz ? '<p class="k-small" style="color:#ff8a80">Inside today\'s OPW 1-in-100-year flood zone.</p>' : p.fz1 ? '<p class="k-small" style="color:#9ec9ff">Reached by a 1-in-100-year sea flood with the sea 1 m higher (about 2100).</p>' : (p.k === 'sub' || p.k === 'tx' || p.k === 'gen') ? '<p class="k-small k-dim">Outside the mapped flood zones.</p>' : ''}<p class="k-small k-dim">From OpenStreetMap and Tailte Éireann 1:1000 mapping.</p>`; $('#insp').hidden = false; $('#insp .x').onclick = () => { $('#insp').hidden = true; }; return; }
     }
+    if (SH && K.layers.shore) { const q = map.queryRenderedFeatures(e.point, { layers: ['shore'] })[0];
+      if (q) { const p = SH.periods[q.properties.i], W = { pre1837: 'On the 1837 survey a wall already ran out across the foreshore; inside it the surveyors drew the older shore and named it the Enclosed Water Mark.', '1837_1910': 'By the 1910 survey the railway ran out on this causeway to the Deepwater Berths Quay. The Upper Flat behind it was still mud at high tide.', after_1910: 'Mud at high tide on the 1910 and 1940 surveys. Filled from about 1958 by the Harbour Commissioners, then as the Council landfill from 1977 to 1994.' }[p.k];
+        $('#insp').innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>Land won from the sea</h3><span class="k-dim"><i style="display:inline-block;width:10px;height:10px;background:${AW.SHORE[p.k][0]};border-radius:2px"></i> ${esc(AW.SHORE[p.k][1])} · ${fmtN(p.ha, 1)} ha</span>
+          <p class="k-small" style="margin:8px 0">${esc(W)}</p><p class="k-small" style="color:#9ec9ff">In the OPW 1-in-100-year sea flood zone: ${p.flood['0']}% of it today, ${p.flood['1']}% with the sea 1 m higher. ${p.nb['0']} of its ${p.n} buildings are reached today.</p>
+          <p class="k-small k-dim">Traced from the Ordnance Survey 1837 and 1910 sheets (about ±15 m) and Tailte Éireann's 2023 high-water mark.</p>`;
+        $('#insp').hidden = false; $('#insp .x').onclick = () => { $('#insp').hidden = true; }; return; } }
     if (NA && K.layers.nature) { const q = map.queryRenderedFeatures(e.point, { layers: ['nature-sac', 'nature-spa', 'nature-nha'] }); if (q.length) return inspectN([...new Set(q.map(x => x.properties.i))]); }
     const f = map.queryRenderedFeatures(e.point, { layers: ['b'] })[0]; if (f) return inspectB(f.id);
     const a = map.queryRenderedFeatures(e.point, { layers: ['area-fill', 'a-sel'] })[0]; if (a) return inspectA(a.id);
@@ -585,6 +601,8 @@
     () => { const s = seaAt(0.5, 100); return ['About 2100: the sea 0.5 m higher', `The same storm then reaches ${fmtN(s.count)} buildings.`]; },
     () => { const s = seaAt(1, 100); return ['About 2100: the sea 1 m higher', `${fmtN(s.count)} buildings and ${fmtN(s.homes)} homes are in the flood zone.`]; },
     () => { const s = seaAt(2, 2); return ['The sea 2 m higher', `Then a storm tide expected every other winter reaches ${fmtN(s.count)} buildings.`]; },
+    SH && (() => { seaAt(0, 100, ['shore']); const P = k => SH.periods.find(p => p.k === k) || { ha: 0, flood: {} }, tot = SH.periods.reduce((t, p) => t + p.ha, 0);
+      return ['The docks were the sea', `About ${fmtN(tot)} ha of the docks was mudflat at high tide. The oldest part, behind the Ballast Wall, is the lowest: ${P('pre1837').flood['0']}% of it is in today's 1-in-100-year flood zone, ${P('pre1837').flood['1']}% with the sea 1 m higher.`]; }),
     NH && (() => { seaAt(1, 100, ['niah']); const hit = NH.items.filter(o => o.fz1), nat = [...new Set(hit.filter(o => o.rating === 'National').map(o => o.name))];
       return ['Heritage in the water\'s way', `${fmtN(hit.length)} buildings in the National Inventory of Architectural Heritage stand in that flood zone${nat.length ? ', among them ' + listNames(nat, 3) : ''}.`]; }),
     PW && (() => { seaAt(0, 100, ['power']); const n = PW.pts.filter(p => (p.k === 'sub' || p.k === 'tx') && p.fz).length;
@@ -646,6 +664,10 @@
       const ys = []; for (let y = PL.first; y <= PL.last; y++) ys.push([String(y), by[y] || 0, y === K.planY]);
       return { h: K.planOnly ? `Planning permissions in ${K.planY}` : `Planning permissions, 2017 to ${K.planY}`, text: 'Planning permissions granted by Sligo County Council, coloured by what they are for. A permission is not a building started, but it shows where the town means to grow, and how much of that is near the water.',
         stats: [st(g.length, 'permissions', 1), st(g.reduce((t, a) => t + a.h, 0), 'new homes permitted'), st(g.filter(a => a.fz).length, 'sites in today\'s flood zones')], chart: { title: 'New homes permitted each year', bars: ys } }; },
+    shore: () => { const tot = SH.periods.reduce((t, p) => t + p.ha, 0), lab = { pre1837: 'Before 1837', '1837_1910': '1837–1910', after_1910: 'After 1940' };
+      return { h: 'Where the docks came from', text: `About ${fmtN(tot)} ha of the docks was sea or mudflat at high tide. A wall came first, before 1837, then a railway causeway to the Deepwater Berths by 1910. The Upper Flat behind it was filled from about 1958, much of it as the town's landfill. Dashed: the 1837 shore; red: 1910; blue: today.`,
+        stats: SH.periods.map(p => st(fmtN(p.ha, 1) + ' ha', `${lab[p.k].toLowerCase()}; ${p.flood['0']}% in the flood zone today`, p.k === 'pre1837')).concat([st(SH.periods.reduce((t, p) => t + p.n, 0), 'buildings on reclaimed land')]),
+        chart: { title: 'Hectares won from the sea, by period', bars: SH.periods.map(p => [lab[p.k], p.ha, false]) } }; },
     nature: () => ({ h: 'Protected nature', text: `The Garavogue joins two places protected by European law: ${[...new Set(NA.sites.filter(x => x.k === 'sac').map(x => x.name))].join(' and ')}. Sea and river rising change these habitats too: salt marsh and mudflats need room to move inland.`,
       stats: [st(D.B.filter(b => b.properties.pz != null && b.properties.pz <= 50).length, 'buildings within 50 m of a protected site', 1), ...NA.sites.filter(x => x.k !== 'pnha').map(x => st(fmtN(x.hain) + ' ha', `${AW.NATURE[x.k][1]}: ${x.name}`))].slice(0, 4) }),
     niah: () => { const c = r => NH.items.filter(o => o.rating === r).length;

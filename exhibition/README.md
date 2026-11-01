@@ -55,7 +55,7 @@ TomTom only gives traffic as it is now, so record a real weekday first:
 Recorded on another computer? **Export** there and **Import** on the exhibition computer. The recording stays in the browser; it isn't published with the website.
 
 ## The story (attract loop)
-When nobody has touched the kiosk for `storyAfterSeconds` (40), it plays a short story on the kiosk and the model, one step every `storyStepSeconds` (9): today's 1-in-100-year storm tide, the sea 0.5, 1 and 2 m higher, heritage buildings in the water's way, substations in today's flood zone, the protected river, and planning since 2017, then an invitation to touch. The numbers in the captions come from the data. Any touch stops it and leaves the kiosk ready to use. Staff can start it from the staff panel (**Play the story now**); set `"story": false` in `config.json` to turn it off.
+When nobody has touched the kiosk for `storyAfterSeconds` (40), it plays a short story on the kiosk and the model, one step every `storyStepSeconds` (9): today's 1-in-100-year storm tide, the sea 0.5, 1 and 2 m higher, the docks built on land won from the sea, heritage buildings in the water's way, substations in today's flood zone, the protected river, and planning since 2017, then an invitation to touch. The numbers in the captions come from the data. Any touch stops it and leaves the kiosk ready to use. Staff can start it from the staff panel (**Play the story now**); set `"story": false` in `config.json` to turn it off.
 
 ## The story screen (large monitor)
 `screen.html` goes on a large monitor beside the model (a 55–75 inch TV is fine). It never takes touches: it follows the kiosk and explains what is on the model, readable from a few metres away.

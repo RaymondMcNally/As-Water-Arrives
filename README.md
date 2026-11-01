@@ -33,6 +33,9 @@ The **Traffic** layer is **live TomTom flow** (style `relative`, zoom 15, refres
 ## Electricity
 `tools/make_electric.py` merges an Overpass export of OpenStreetMap power features (lines with voltage, ESB substations, transformers, solar panels, poles) with points read from the Tailte Éireann PRIME2 1:1000 DWG sheets (local substations, transformer poles, pylons, poles; converted with LibreDWG, see `PRIME2_utility_points_ITM.csv`) into `data/electric.json`, flagging substations and transformers in today's OPW flood zones and with the sea 1 m higher.
 
+## Shoreline of the docks
+`tools/make_shoreline.py` takes the docks history files (`docks_change_itm.geojson`, `docks_change_wgs84.geojson`; traced from the Ordnance Survey 1837 and 1910 sheets, with Tailte Éireann's 2023 high-water mark where the shore has not moved) and writes `data/shoreline.json`: the land won from the sea before 1837 (behind the Ballast Wall, 4.4 ha), 1837–1910 (the Deepwater causeway, 2.1 ha) and after 1940 (the Upper Flat, 28.3 ha), with the share of each in the OPW coastal flood zones, and the high-water lines of 1837, 1910 and 2023. Buildings get `rc` (1, 2 or 3) for the period of the land they stand on.
+
 ## Protected nature sites
 `tools/make_protected.py` clips the NPWS SAC, SPA, NHA and pNHA boundaries (cut to Sligo as GeoJSON) to the model (`data/protected.json`) and gives buildings and planning sites `pz`, the distance to the nearest SAC or SPA up to 200 m. The Garavogue is part of Lough Gill SAC, so much of the town centre is within 50 m of a European site.
 
