@@ -49,6 +49,7 @@
   Object.values(UT).forEach(u => LAYERS.push({ id: u.id, n: u.name, s: u.sub, col: u.col, on: false }));
   const PL = await AW.planning(); if (PL) LAYERS.push({ id: 'planning', n: 'Planning permissions', s: 'Granted since 2017, year by year', col: AW.PLAN.homes[0], on: false });
   const NA = await AW.nature(); if (NA) LAYERS.push({ id: 'nature', n: 'Protected nature sites', s: 'SAC, SPA and pNHA (NPWS)', col: AW.NATURE.sac[0], on: false });
+  const NH = await AW.niah(); if (NH) LAYERS.push({ id: 'niah', n: 'Architectural heritage', s: 'NIAH buildings, by rating', col: AW.NIAH.National[0], on: false });
   const PW = await AW.power(); if (PW) LAYERS.push({ id: 'power', n: 'Electricity', s: 'Lines, substations, transformers', col: AW.POWER.sub[0], on: false });
   const CY = await AW.cycling(); if (CY) LAYERS.push({ id: 'cycle', n: 'Cycle routes', s: 'Tracks, shared paths and lanes', col: AW.CYCLE.track[0], on: false });
   const TT = AW.traffic; TT.setConfigKey(cfg.tomtomKey); let ttB = -1, ttErr = '', ttRetry = 0;
@@ -203,6 +204,12 @@
     map.addLayer({ id: 'nature-spa', type: 'line', source: 'nature', filter: ['==', 'k', 'spa'], layout: { visibility: 'none' }, paint: { 'line-color': AW.NATURE.spa[0], 'line-width': 2.2, 'line-dasharray': [3, 2] } });
     map.addLayer({ id: 'nature-nha', type: 'line', source: 'nature', filter: ['in', 'k', 'nha', 'pnha'], layout: { visibility: 'none' }, paint: { 'line-color': AW.NATURE.pnha[0], 'line-width': 1.4, 'line-dasharray': [1, 2] } });
   }
+  if (NH) {                                                          // NIAH: the matched building footprints, coloured by rating; points where no footprint matched
+    const feats = NH.items.map((o, i) => ({ type: 'Feature', properties: { i, col: (AW.NIAH[o.rating] || AW.NIAH.Local)[0] }, geometry: o.b != null ? BJ.features[o.b].geometry : { type: 'Point', coordinates: fromITM(o.x, o.y) } }));
+    map.addSource('niah', { type: 'geojson', data: { type: 'FeatureCollection', features: feats } });
+    map.addLayer({ id: 'niah', type: 'fill-extrusion', source: 'niah', filter: ['!=', ['geometry-type'], 'Point'], layout: { visibility: 'none' }, paint: { 'fill-extrusion-color': ['get', 'col'], 'fill-extrusion-height': 14, 'fill-extrusion-opacity': .95 } });
+    map.addLayer({ id: 'niah-pt', type: 'circle', source: 'niah', filter: ['==', ['geometry-type'], 'Point'], layout: { visibility: 'none' }, paint: { 'circle-radius': 5, 'circle-color': ['get', 'col'], 'circle-stroke-color': '#050d10', 'circle-stroke-width': 1 } });
+  }
   if (PW) {                                                          // electricity: lines by voltage, ESB substations, points; rings where the flood zone reaches
     map.addSource('power-l', { type: 'geojson', data: { type: 'FeatureCollection', features: (PW.lines || []).map(l => ({ type: 'Feature', properties: { col: AW.VOLT[l.v][0], u: l.u, w: l.v === '38kv' || l.v === '110kv' ? 2.6 : l.v === 'mv' ? 1.8 : 1.2 }, geometry: { type: 'LineString', coordinates: l.xy.map(([e, n]) => fromITM(e, n)) } })) } });
     map.addLayer({ id: 'power-l', type: 'line', source: 'power-l', layout: { visibility: 'none', 'line-cap': 'round' }, paint: { 'line-color': ['get', 'col'], 'line-width': ['get', 'w'], 'line-dasharray': ['case', ['==', ['get', 'u'], 1], ['literal', [1, 1.5]], ['literal', [1, 0]]] } });
@@ -260,7 +267,7 @@
     const vis = (id, on) => map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
     vis('roads', K.layers.roads); vis('water', K.layers.water); vis('zoning', K.layers.zoning); vis('mon', K.layers.mon);
     vis('scheme', K.layers.scheme); vis('opw', K.layers.opw); vis('tiles', K.layers.grid); vis('hs', true); map.setPaintProperty('hs', 'raster-opacity', K.layers.relief ? .8 : .45);
-    vis('area-fill', K.layers.areas); trafficTick(); Object.values(UT).forEach(u => { vis(u.id, K.layers[u.id]); vis(u.id + '-flow', K.layers[u.id]); if (map.getLayer(u.id + '-out')) vis(u.id + '-out', K.layers[u.id]); if (map.getLayer(u.id + '-plant')) vis(u.id + '-plant', K.layers[u.id]); ['-zone', '-zone-l', '-tank'].forEach(x => { if (map.getLayer(u.id + x)) vis(u.id + x, K.layers[u.id]); }); }); if (CY) { vis('cycle', K.layers.cycle); vis('cycle-park', K.layers.cycle); } planShow(); if (PW) ['power', 'power-cov', 'power-l', 'power-s'].forEach(id => vis(id, K.layers.power)); if (NA) ['nature-sac', 'nature-sac-l', 'nature-spa', 'nature-nha'].forEach(id => vis(id, K.layers.nature)); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses && !K.layers.traffic; busTick();
+    vis('area-fill', K.layers.areas); trafficTick(); Object.values(UT).forEach(u => { vis(u.id, K.layers[u.id]); vis(u.id + '-flow', K.layers[u.id]); if (map.getLayer(u.id + '-out')) vis(u.id + '-out', K.layers[u.id]); if (map.getLayer(u.id + '-plant')) vis(u.id + '-plant', K.layers[u.id]); ['-zone', '-zone-l', '-tank'].forEach(x => { if (map.getLayer(u.id + x)) vis(u.id + x, K.layers[u.id]); }); }); if (CY) { vis('cycle', K.layers.cycle); vis('cycle-park', K.layers.cycle); } planShow(); if (PW) ['power', 'power-cov', 'power-l', 'power-s'].forEach(id => vis(id, K.layers.power)); if (NH) ['niah', 'niah-pt'].forEach(id => vis(id, K.layers.niah)); if (NA) ['nature-sac', 'nature-sac-l', 'nature-spa', 'nature-nha'].forEach(id => vis(id, K.layers.nature)); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses && !K.layers.traffic; busTick();
     if (K.layers.areas) { const cm = areaColours(D.A, K.areaKey), pairs = []; D.A.forEach(a => { const c = cm.get(a.properties[K.areaKey]); if (c) pairs.push(a.properties.sa_pub2022, c); });
       map.setPaintProperty('area-fill', 'fill-color', pairs.length ? ['match', ['get', 'sa_pub2022'], ...pairs, 'rgba(0,0,0,0)'] : 'rgba(0,0,0,0)'); }
     legend();
@@ -276,6 +283,7 @@
     if (K.layers.traffic) { (live() && !K.busFast ? TT.legend : TY.legend).forEach(x => L.push(x)); if (TT.key() && ttErr) L.push(['#555', 'Live TomTom data did not load (see staff panel)']); }
     Object.values(UT).forEach(u => { if (K.layers[u.id]) { L.push([u.col, u.id === 'sewer' ? 'Sewer pipes (dashes flow downstream)' : u.name]); if (u.points.outfall.length) L.push([u.col, 'Sewer outfalls']); if (u.zones.length) { const by = {}; u.zones.forEach(z => { by[z.srcName] = by[z.srcName] || [AW.SUPPLY[z.src], 0]; by[z.srcName][1]++; }); Object.entries(by).forEach(([n, [c, k]]) => L.push([c, `Supplied from ${n}: ${k} zone${k === 1 ? '' : 's'}`])); } if (u.tanks.length) L.push([u.col, `○ Reservoirs: ${u.tanks.length}`]); u.plants.forEach(p => L.push([u.col, `● ${p.name}${p.pe ? ` (built for ${fmtN(p.pe)} people)` : ''}, just outside the model`])); } });
     if (K.layers.cycle && CY) { Object.entries(AW.CYCLE).forEach(([k, [c, n]]) => { if (CY.km[k]) L.push([c, `${n}: ${fmtN(CY.km[k], 1)} km`]); }); L.push(['#ffffff', `Bike parking: ${CY.parking.length} places`]); }
+    if (K.layers.niah && NH) { const c = r => NH.items.filter(o => o.rating === r).length; ['National', 'Regional', 'Local'].forEach(r => { if (c(r)) L.push([AW.NIAH[r][0], `NIAH, ${r.toLowerCase()} importance: ${c(r)}`]); }); L.push(['#7aa7ff', `In today's 1-in-100-year flood zones: ${NH.items.filter(o => o.fz).length}; with the sea 1 m higher: ${NH.items.filter(o => o.fz1).length}`]); }
     if (K.layers.power && PW) {
       const n = k => PW.pts.filter(p => p.k === k).length, vs = new Set((PW.lines || []).map(l => l.v));
       (PW.subs || []).filter(s => /38/.test(s.v)).length && L.push(['#ff5d8f', `ESB 38 kV substations: ${(PW.subs || []).filter(s => /38/.test(s.v)).length} (none in a flood zone)`]);
@@ -459,6 +467,17 @@
     touch();
     if (PL && K.layers.planning) { const q = map.queryRenderedFeatures(e.point, { layers: ['plan-fill', 'plan-pt'] })[0]; if (q) return inspectP(q.properties.i); }
     for (const u of Object.values(UT)) if (u.zones.length && K.layers[u.id]) { const q = map.queryRenderedFeatures(e.point, { layers: [u.id + '-zone'] })[0]; if (q) { const z = u.zones[q.properties.i]; $('#insp').innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>Water supply zone</h3><p style="margin:6px 0"><i style="display:inline-block;width:10px;height:10px;background:${AW.SUPPLY[z.src] || '#888'};border-radius:2px"></i> <b>${esc(z.name)}</b></p><span class="k-small k-dim">Supplied from ${esc(z.srcName)}. From the 2008 Sligo &amp; Environs water network model.</span>`; $('#insp').hidden = false; $('#insp .x').onclick = () => { $('#insp').hidden = true; }; return; } }
+    if (NH && K.layers.niah) {
+      const q = map.queryRenderedFeatures(e.point, { layers: ['niah', 'niah-pt'] })[0];
+      if (q) { const o = NH.items[q.properties.i], dt = o.from ? (o.to && o.to !== o.from ? `${o.from}–${o.to}` : o.from) : '';
+        $('#insp').innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>${esc(o.name)}</h3>
+          <span class="k-dim"><i style="display:inline-block;width:10px;height:10px;background:${(AW.NIAH[o.rating] || AW.NIAH.Local)[0]};border-radius:2px"></i> ${esc(o.rating || '')} importance${dt ? ' · ' + esc(dt) : ''}${o.orig ? ' · built as ' + esc(o.orig) : ''}${o.use && o.use !== o.orig ? ', now ' + esc(o.use) : ''}</span>
+          ${o.addr ? `<p class="k-small k-dim" style="margin:4px 0 0">${esc(o.addr)}</p>` : ''}<p class="k-small" style="margin:8px 0">${esc(o.desc)}${o.desc.length >= 240 ? '…' : ''}</p>
+          ${o.fz ? '<p class="k-small" style="color:#9ec9ff">Inside today\'s OPW 1-in-100-year flood zone.</p>' : o.fz1 ? '<p class="k-small" style="color:#9ec9ff">Reached by a 1-in-100-year sea flood with the sea 1 m higher (about 2100).</p>' : ''}
+          ${o.pz != null && o.pz <= 50 ? `<p class="k-small" style="color:#8fe6b0">${o.pz === 0 ? 'Inside' : 'Within ' + o.pz + ' m of'} a European protected site (SAC or SPA).</p>` : ''}
+          <p class="k-small k-dim">NIAH ${esc(o.reg)}, National Inventory of Architectural Heritage (buildingsofireland.ie).</p>`;
+        $('#insp').hidden = false; $('#insp .x').onclick = () => { $('#insp').hidden = true; }; return; }
+    }
     if (PW && K.layers.power) {
       const qs = map.queryRenderedFeatures(e.point, { layers: ['power-s'] })[0];
       if (qs) { const st = PW.subs[qs.properties.i]; $('#insp').innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>${esc(st.name)}</h3><span class="k-dim">ESB Networks · ${esc(st.v || 'voltage not recorded')}</span><p class="k-small" style="margin-top:8px">${st.fz ? 'Inside today\'s OPW 1-in-100-year flood zone.' : st.fz1 ? 'Reached by a 1-in-100-year sea flood with the sea 1 m higher.' : 'Outside the OPW flood zones, today and with the sea 1 m higher.'}</p><p class="k-small k-dim">From OpenStreetMap.</p>`; $('#insp').hidden = false; $('#insp .x').onclick = () => { $('#insp').hidden = true; }; return; }

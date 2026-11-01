@@ -26,6 +26,9 @@ The **Traffic** layer shows **typical traffic** on the main roads for the time o
 ## Sea-level rise
 `tools/make_opw_future.py` clips the OPW's national coastal flood maps (2021: present day, and future scenarios +0.5 to +2.0 m for about 2100) and the river's mid-range and high-end future extents to the circle (`data/opw_future.json`) and gives each building the smallest rise that reaches it (`cf2`, `cf20`, `cf100`) and its future river band (`om`, `oh`). The kiosk's **Sea-level rise** choice steps through them.
 
+## Architectural heritage
+`tools/make_niah.py` takes the NIAH open-data service export for the model's area, matches each record to its building footprint, writes `data/niah.json` (rating, dates, use, short description, link, flood and SAC flags) and gives buildings `nhr` (3 national, 2 regional, 1 local) for the kiosk's questions.
+
 ## Electricity
 `tools/make_electric.py` merges an Overpass export of OpenStreetMap power features (lines with voltage, ESB substations, transformers, solar panels, poles) with points read from the Tailte Éireann PRIME2 1:1000 DWG sheets (local substations, transformer poles, pylons, poles; converted with LibreDWG, see `PRIME2_utility_points_ITM.csv`) into `data/electric.json`, flagging substations and transformers in today's OPW flood zones and with the sea 1 m higher.
 

@@ -55,7 +55,7 @@
     rigs: {},                               // per set-up: [{ h, nx, ny, pins }] lens height (mm), lens offset from Lady Erin (mm, +east/+north), pins (screen 0–1)
     base: 9, datum: -3, vex: 1,             // how the tiles were printed: base slab (mm), datum (m OD) and ground exaggeration
     cal: false, test: false, follow: true, bright: 1,
-    layers: { roads: true, water: true, areas: false, zoning: false, mon: false, scheme: false, relief: false, grid: false, opw: false, buses: false, traffic: false, sewer: false, watermains: false, cycle: false, planning: false, nature: false, power: false },
+    layers: { roads: true, water: true, areas: false, zoning: false, mon: false, scheme: false, relief: false, grid: false, opw: false, buses: false, traffic: false, sewer: false, watermains: false, cycle: false, planning: false, nature: false, power: false, niah: false },
     kiosk: null                             // last state from the kiosk
   };
   let edit = 0;                             // the projector the control page is calibrating
@@ -91,6 +91,7 @@
   const PLN = await AW.planning();
   const NAT = await AW.nature();
   const PWR = await AW.power();
+  const NIA = await AW.niah();
   const TT = AW.traffic; getJSON('exhibition/config.json').then(c => TT.setConfigKey(c.tomtomKey)).catch(() => { });
   const CIRC = MJ.circle.coordinates[0], TBOX = [Math.min(...CIRC.map(c => c[0])), Math.min(...CIRC.map(c => c[1])), Math.max(...CIRC.map(c => c[0])), Math.max(...CIRC.map(c => c[1]))];
   let TR = null, trB = -1, trBusy = false;
@@ -160,6 +161,11 @@
           else { tx.strokeStyle = AW.NATURE.pnha[0]; tx.lineWidth = 4 * k; tx.setLineDash([5 * k, 10 * k]); }
           tx.beginPath(); path(g); tx.stroke(); tx.setLineDash([]);
         }));
+      }
+      if (L.niah && NIA) {                                              // NIAH: the buildings themselves, by rating, with a white edge
+        NIA.items.forEach(o => { const c = (AW.NIAH[o.rating] || AW.NIAH.Local)[0];
+          if (o.b != null && B[o.b]) { fill(B[o.b], c, .95); tx.strokeStyle = '#ffffff'; tx.lineWidth = 2; tx.beginPath(); path(B[o.b]); tx.stroke(); }
+          else { const [a, b] = P(o.x, o.y); tx.fillStyle = c; tx.beginPath(); tx.arc(a, b, 8 * k, 0, 7); tx.fill(); } });
       }
       if (L.power && PWR) {                                             // electricity: lines by voltage (cables dashed), ESB substations, then points; rings in flood zones
         tx.lineCap = 'round';
@@ -415,7 +421,7 @@
   $('#follow').onchange = e => { S.follow = e.target.checked; changed(); showKiosk(); };
   $('#bright').oninput = e => { S.bright = +e.target.value / 100; changed(); };
   $('#resetPins').onclick = () => { const m = mode(), i = Math.min(edit, S.n - 1); S.rigs[m][i] = freshRig(m, i); calChanged(true); syncUI(); };
-  const LBL = { roads: 'Roads', water: 'Water today', areas: 'Census areas', zoning: 'Zoning', mon: 'Recorded monuments', scheme: 'Proposed river crossing', relief: 'Shaded relief', grid: 'Tile grid', opw: 'OPW flood maps', buses: 'Town buses (timetable)', traffic: 'Traffic (live with a TomTom key, otherwise typical)', sewer: 'Sewers (2008)', watermains: 'Water mains', cycle: 'Cycle routes', planning: 'Planning permissions', nature: 'Protected nature sites', power: 'Electricity' };
+  const LBL = { roads: 'Roads', water: 'Water today', areas: 'Census areas', zoning: 'Zoning', mon: 'Recorded monuments', scheme: 'Proposed river crossing', relief: 'Shaded relief', grid: 'Tile grid', opw: 'OPW flood maps', buses: 'Town buses (timetable)', traffic: 'Traffic (live with a TomTom key, otherwise typical)', sewer: 'Sewers (2008)', watermains: 'Water mains', cycle: 'Cycle routes', planning: 'Planning permissions', nature: 'Protected nature sites', power: 'Electricity', niah: 'Architectural heritage (NIAH)' };
   $('#layers').innerHTML = Object.keys(S.layers).filter(k2 => !(k2 in { sewer: 1, watermains: 1 }) || UT[k2]).map(k2 => `<label class="row"><input type="checkbox" data-l="${k2}"> ${LBL[k2]}</label>`).join('');
   $('#layers').querySelectorAll('[data-l]').forEach(c => c.onchange = () => { S.layers[c.dataset.l] = c.checked; changed(); });
   const STEPS = {

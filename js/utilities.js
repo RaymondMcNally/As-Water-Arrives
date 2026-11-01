@@ -45,6 +45,9 @@
     (J.subs || []).forEach(s => { if (s.r) s.ring = xy(s.r); });
     return J;
   };
+  // NIAH: architectural heritage (data/niah.json), each record matched to a building (b = index in buildings.json)
+  AW.NIAH = { National: ['#ff4d6d', 'National'], Regional: ['#f4a261', 'Regional'], Local: ['#e9c46a', 'Local'] };
+  AW.niah = async function () { return await AW.getJSON('data/niah.json').catch(() => null); };
   AW.utilities = async function () {
     const out = {};
     await Promise.all(Object.entries(NETS).map(async ([k, n]) => {

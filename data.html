@@ -51,6 +51,7 @@
       <tr><td>Planning permissions</td><td>Department of Housing, Local Government and Heritage: National Planning Applications (CC BY 4.0), Sligo County Council ePlanning, from 2017</td><td>Applications inside the circle, by year decided. The type and number of homes are read from each description (the units field is often wrong), so treat them as approximate. Applicant names and addresses are left out; each links to its public ePlanning record. A permission is not a building started.</td></tr>
       <tr><td>Protected nature sites</td><td>National Parks and Wildlife Service (NPWS), CC BY 4.0: SAC (July 2023), SPA (May 2023), NHA (June 2019), proposed NHA (Nov 2015)</td><td>Lough Gill SAC (including the Garavogue), Cummeen Strand/Drumcliff Bay SAC, Cummeen Strand SPA and the matching pNHAs, clipped to the model. Buildings and planning sites record their distance to the nearest SAC or SPA (up to 200 m).</td></tr>
       <tr><td>Electricity</td><td>© OpenStreetMap contributors (ODbL), Overpass export November 2026; Tailte Éireann PRIME2 1:1000 mapping (street features)</td><td>Lines by voltage, ESB 38 kV substations, transformers and solar panels from OpenStreetMap; local substations (mini-pillars and kiosks), transformer poles, pylons and poles from the Tailte Éireann map sheets, which cover about 78% of the model. Underground cables are not public and are not shown. Substations and transformers are checked against today's OPW flood zones and the sea 1 m higher.</td></tr>
+      <tr><td>Architectural heritage</td><td>National Inventory of Architectural Heritage (NIAH), buildingsofireland.ie, CC BY 4.0: NIAH Survey of County Sligo</td><td>331 records inside the circle (17 national, 314 regional), 322 matched to their building footprint. Each is checked against today's OPW flood zones, the sea 1 m higher, and its distance to an SAC or SPA.</td></tr>
       <tr><td>Live water levels</td><td>OPW waterlevel.ie, CC BY 4.0</td><td>Shown on the kiosk when the browser can reach the feed.</td></tr>
     </table></div>
   </div>
@@ -78,6 +79,7 @@
         <tr><td><code>data/planning.json</code></td><td>Planning applications: site outline, year, decision, type, homes, flood-zone flags (ITM)</td></tr>
         <tr><td><code>data/protected.json</code></td><td>Protected nature site boundaries (ITM)</td></tr>
         <tr><td><code>data/electric.json</code></td><td>Electricity lines, substations and points with flood flags (ITM)</td></tr>
+        <tr><td><code>data/niah.json</code></td><td>NIAH records with rating, dates, use, the matched building and flood flags (ITM)</td></tr>
         <tr><td><code>data/model.json</code></td><td>The circle, the 52 tiles and the proposed crossing</td></tr>
         <tr><td><code>data/model/dtm2m.bin</code></td><td>The ground: 2,051 × 2,051 Int16 centimetres, 2 m, origin in <code>terrain.json</code></td></tr>
       </table></div>
