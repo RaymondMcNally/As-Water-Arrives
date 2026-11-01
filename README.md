@@ -24,7 +24,7 @@ The kiosk, the projection page and the projector windows must be open in the **s
 The **Traffic** layer shows **typical traffic** on the main roads for the time of day, on the same clock as the buses (`js/typical.js`). It is a model, not measured traffic, and needs no account. If a TomTom API key is ever added (kiosk staff panel or Projection page; kept in that browser only), the layer switches to live TomTom flow tiles.
 
 ## Sea-level rise
-`tools/make_opw_future.py` clips the OPW's national coastal flood maps (2021, future scenarios +0.5 to +2.0 m, about 2100) and the river's mid-range and high-end future extents to the circle (`data/opw_future.json`) and gives each building the smallest rise that reaches it (`cf2`, `cf20`, `cf100`) and its future river band (`om`, `oh`). The kiosk's **Sea-level rise** choice steps through them.
+`tools/make_opw_future.py` clips the OPW's national coastal flood maps (2021: present day, and future scenarios +0.5 to +2.0 m for about 2100) and the river's mid-range and high-end future extents to the circle (`data/opw_future.json`) and gives each building the smallest rise that reaches it (`cf2`, `cf20`, `cf100`) and its future river band (`om`, `oh`). The kiosk's **Sea-level rise** choice steps through them.
 
 ## Sewers and water mains
 - **Sewers:** `tools/make_sewer.py` builds `data/sewer.json` from the 2008 Sligo & Environs sewer network (MapInfo, Irish Grid): reprojected to ITM, shifted 6.5 m west and 5 m north to fit the building footprints, and each pipe turned to run downstream using the network's flow arrows. On the kiosk and projector, dots move downstream to the outfalls.

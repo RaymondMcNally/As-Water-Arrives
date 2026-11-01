@@ -17,10 +17,10 @@
   (await getJSON('data/opw_future.json').catch(() => ({ features: [] }))).features.forEach(f => FJ.features.push(f));
   const OPWNAME = { 10: '1 in 10 years', 5: '1 in 20 years', 1: '1 in 100 years', 0.1: '1 in 1,000 years' };
   const FUTNAME = { now: 'today', m: 'mid-range future', h: 'high-end future' };
-  const RISENAME = { 0.5: 'mid-range future', 1: 'high-end future', 1.5: 'high+ future', 2: 'high++ future' };
+  const RISENAME = { 0: 'today', 0.5: 'mid-range future', 1: 'high-end future', 1.5: 'high+ future', 2: 'high++ future' };
   const D = { B: BJ.features, A: AJ.features, SA: {} };
   D.A.forEach((a, i) => { D.SA[a.properties.sa_pub2022] = a.properties; });
-  const LEVELS = { opw: [10, 5, 1], opwF: [10, 1, 0.1], coast: [0.5, 1, 1.5, 2], sea: [...new Set(FJ.features.filter(f => f.properties.src === 'sea').map(f => f.properties.level))].sort((a, b) => a - b),
+  const LEVELS = { opw: [10, 5, 1], opwF: [10, 1, 0.1], coast: [0, 0.5, 1, 1.5, 2], sea: [...new Set(FJ.features.filter(f => f.properties.src === 'sea').map(f => f.properties.level))].sort((a, b) => a - b),
                    lake: [...new Set(FJ.features.filter(f => f.properties.src === 'lake').map(f => f.properties.level))].sort((a, b) => a - b) };
 
   // ---------------------------------------------------------------- state (what the projector shows)
@@ -185,7 +185,7 @@
   const srcCol = () => K.src === 'sea' ? C.sea : K.src === 'lake' ? C.lake : K.src === 'coast' ? C.coast : C.opw;
   const levels = () => K.src === 'opw' && K.fut !== 'now' ? LEVELS.opwF : LEVELS[K.src];
   const isMine = p => p.src === K.src && p.level === K.level && (K.src !== 'coast' || p.rp === K.rp) && (K.src !== 'opw' || (p.fut || 'now') === K.fut);
-  const floodName = () => K.src === 'opw' ? `OPW river flood map, ${FUTNAME[K.fut]}: ${OPWNAME[K.level]}` : K.src === 'coast' ? `OPW sea, ${RISENAME[K.level]} (+${fmtN(K.level, 1)} m): a 1-in-${K.rp}-year flood` : `${K.src === 'sea' ? 'Sea' : 'Lough Gill'} at ${fmtN(K.level, 1)} m OD`;
+  const floodName = () => K.src === 'opw' ? `OPW river flood map, ${FUTNAME[K.fut]}: ${OPWNAME[K.level]}` : K.src === 'coast' ? (K.level ? `OPW sea, ${RISENAME[K.level]} (+${fmtN(K.level, 1)} m): a 1-in-${K.rp}-year flood` : `OPW sea today: a 1-in-${K.rp}-year flood`) : `${K.src === 'sea' ? 'Sea' : 'Lough Gill'} at ${fmtN(K.level, 1)} m OD`;
   function showLayers() {
     const vis = (id, on) => map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
     vis('roads', K.layers.roads); vis('water', K.layers.water); vis('zoning', K.layers.zoning); vis('mon', K.layers.mon);
@@ -221,9 +221,9 @@
   function setLevelUI() {
     const lv = levels(); if (!lv.includes(K.level)) K.level = lv[0]; const i = Math.max(0, lv.indexOf(K.level)), O = K.src === 'opw', CO = K.src === 'coast';
     $('#lv').max = lv.length - 1; $('#lv').value = i;
-    $('#lvTicks').innerHTML = lv.map(v => `<span>${O ? OPWNAME[v] : CO ? '+' + fmtN(v, 1) + ' m' : fmtN(v, 1)}</span>`).join('');
-    $('#lvOut').textContent = O ? OPWNAME[K.level] : CO ? `+${fmtN(K.level, 1)} m` : fmtN(K.level, 1) + ' m OD';
-    $('#pWater .k-levelhead span').textContent = O ? 'A flood this likely' : CO ? 'Sea-level rise by about 2100' : 'Water level';
+    $('#lvTicks').innerHTML = lv.map(v => `<span>${O ? OPWNAME[v] : CO ? (v ? '+' + fmtN(v, 1) + ' m' : 'Today') : fmtN(v, 1)}</span>`).join('');
+    $('#lvOut').textContent = O ? OPWNAME[K.level] : CO ? (K.level ? `+${fmtN(K.level, 1)} m` : 'Today') : fmtN(K.level, 1) + ' m OD';
+    $('#pWater .k-levelhead span').textContent = O ? 'A flood this likely' : CO ? 'Sea level: today, or the rise by about 2100' : 'Water level';
     [['#srcSea', 'sea'], ['#srcLake', 'lake'], ['#srcOpw', 'opw'], ['#srcCoast', 'coast']].forEach(([id, v]) => $(id).setAttribute('aria-pressed', K.src === v));
     $('#pWater').classList.toggle('k-opw', O); $('#pWater').classList.toggle('k-lake', K.src === 'lake'); $('#pWater').classList.toggle('k-coast', CO);
     $('#rpSeg').hidden = !CO; $('#futSeg').hidden = !O;
@@ -235,7 +235,7 @@
     setLevelUI(); showFlood();
     const r = waterReached(), s = summary(D, r), f = FJ.features.find(x => isMine(x.properties));
     setLit('b', on ? r.ids : []);
-    const today = K.src === 'coast' ? `The OPW's national coastal flood maps (2021) for about 2100, with the sea ${fmtN(K.level, 1)} m higher than today (its ${RISENAME[K.level]}), showing a storm tide with a 1-in-${K.rp} chance each year.${K.rp === 2 ? ' 1 in 2 years is not an ordinary tide: it is a high tide with a storm surge, likely to happen about every other year.' : ''}` : K.src === 'opw' ? (K.fut === 'now' ? 'OPW flood maps for the Garavogue (floodinfo.ie): the land with a 10%, 5% or 1% chance of river flooding in any one year. They model the river, not the sea.' : `OPW river flood maps for the ${FUTNAME[K.fut]} (${K.fut === 'm' ? 'about 20%' : 'about 30%'} more water in the river), at 1 in 10, 100 or 1,000 years.`) : K.src === 'sea' ? 'Sligo harbour is usually between about −1 and +2 m OD; the highest tides and surges have reached about 3 m.' : 'Lough Gill usually sits at about 3.8 m OD (lidar, 2011).';
+    const today = K.src === 'coast' ? `The OPW's national coastal flood maps (2021)${K.level ? ` for about 2100, with the sea ${fmtN(K.level, 1)} m higher than today (its ${RISENAME[K.level]})` : ', with today\'s sea'}, showing a storm tide with a 1-in-${K.rp} chance each year.${K.rp === 2 ? ' 1 in 2 years is not an ordinary tide: it is a high tide with a storm surge, likely to happen about every other year.' : ''}` : K.src === 'opw' ? (K.fut === 'now' ? 'OPW flood maps for the Garavogue (floodinfo.ie): the land with a 10%, 5% or 1% chance of river flooding in any one year. They model the river, not the sea.' : `OPW river flood maps for the ${FUTNAME[K.fut]} (${K.fut === 'm' ? 'about 20%' : 'about 30%'} more water in the river), at 1 in 10, 100 or 1,000 years.`) : K.src === 'sea' ? 'Sligo harbour is usually between about −1 and +2 m OD; the highest tides and surges have reached about 3 m.' : 'Lough Gill usually sits at about 3.8 m OD (lidar, 2011).';
     $('#wStats').innerHTML = on ? `
       <div class="k-stat hot"><b>${fmtN(s.count)}</b><span>buildings ${K.src === 'opw' || K.src === 'coast' ? 'in the flood zone' : 'reached'}</span></div>
       <div class="k-stat"><b>${fmtN(s.homes)}</b><span>homes in them</span></div>

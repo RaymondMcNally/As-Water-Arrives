@@ -408,7 +408,7 @@
   function showKiosk(live) {
     const k2 = S.kiosk;
     $('#kioskState').innerHTML = !k2 ? 'No message from the kiosk yet. Open <a href="kiosk.html" target="_blank">kiosk.html</a> in this browser.' :
-      `${live ? '<b>Live:</b> ' : 'Last: '}${k2.flood ? (k2.flood.src === 'opw' ? `OPW river flood map${k2.flood.fut && k2.flood.fut !== 'now' ? ' (' + (k2.flood.fut === 'm' ? 'mid-range' : 'high-end') + ' future)' : ''}, ${k2.flood.level}% a year · ` : k2.flood.src === 'coast' ? `OPW sea +${k2.flood.level} m, 1 in ${k2.flood.rp} years · ` : `${k2.flood.src === 'sea' ? 'sea' : 'Lough Gill'} at ${fmtN(k2.flood.level, 1)} m OD · `) : ''}${fmtN(k2.sel?.ids?.length || 0)} ${k2.sel?.tgt === 'a' ? 'census areas' : 'buildings'} lit`;
+      `${live ? '<b>Live:</b> ' : 'Last: '}${k2.flood ? (k2.flood.src === 'opw' ? `OPW river flood map${k2.flood.fut && k2.flood.fut !== 'now' ? ' (' + (k2.flood.fut === 'm' ? 'mid-range' : 'high-end') + ' future)' : ''}, ${k2.flood.level}% a year · ` : k2.flood.src === 'coast' ? `OPW sea ${k2.flood.level ? '+' + k2.flood.level + ' m' : 'today'}, 1 in ${k2.flood.rp} years · ` : `${k2.flood.src === 'sea' ? 'sea' : 'Lough Gill'} at ${fmtN(k2.flood.level, 1)} m OD · `) : ''}${fmtN(k2.sel?.ids?.length || 0)} ${k2.sel?.tgt === 'a' ? 'census areas' : 'buildings'} lit`;
   }
   function showTraffic() {
     const el = $('#ttState'); if (!el) return;

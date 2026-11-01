@@ -1,6 +1,6 @@
 """OPW future flood maps for the site -> data/opw_future.json and building fields cf2, cf20, cf100, om, oh.
 Usage: python3 make_opw_future.py <folder of Sligo GeoJSON clips> <scratchpad with out/buildings_for_mesh.gpkg> <site>
-Coastal: National Coastal Flood Hazard Mapping 2021 (ncfhm), future scenarios for about 2100: m = mid-range (+0.5 m sea
+Coastal: National Coastal Flood Hazard Mapping 2021 (ncfhm): c = present day; future scenarios for about 2100: m = mid-range (+0.5 m sea
 level), h = high-end (+1.0 m), h+ (+1.5 m), h++ (+2.0 m); kept at 1 in 2, 20 and 100 years. River: NIFM/CFRAM future
 extents (esds), m = mid-range, h = high-end, at 10%, 1% and 0.1% a year (1 in 10, 100, 1,000).
 Each building: the smallest sea-level rise whose extent reaches it, per return period (cf2, cf20, cf100), and the most
@@ -12,7 +12,7 @@ from pyproj import Transformer
 A, S, SITE = sys.argv[1:4]
 to_ll = Transformer.from_crs(2157, 4326, always_xy=True).transform
 M = json.load(open(f'{SITE}/data/model.json')); C = Point(*M['centre']).buffer(M['radius'], 256)
-RISE = {'m': .5, 'h': 1.0, 'hplus': 1.5, 'hplusplus': 2.0}
+RISE = {'c': 0.0, 'm': .5, 'h': 1.0, 'hplus': 1.5, 'hplusplus': 2.0}     # c = present day
 def load(f, crs):
     J = json.load(open(f)); g = gpd.GeoDataFrame.from_features(J['features'], crs=crs).to_crs(2157)
     u = unary_union(shapely.force_2d(g.geometry).make_valid())
