@@ -37,7 +37,7 @@
     { id: 'buses', n: 'Town buses', s: 'S1, S2 and S3, from the timetable', col: '#ff4f7b', on: false },
     { id: 'traffic', n: 'Traffic', s: 'Main roads, typical for the time of day', col: '#e53935', on: false }
   ];
-  const DEF = () => ({ tab: 'water', src: 'sea', level: 3.0, flood: true, preset: -1, query: null, layers: Object.fromEntries(LAYERS.map(l => [l.id, l.on])), areaKey: 'pct_ber_e_to_g', busFast: false, rp: 100, fut: 'now', planY: 2026, planOnly: false });
+  const DEF = () => ({ tab: 'water', src: 'sea', level: 3.0, flood: true, preset: -1, query: null, layers: Object.fromEntries(LAYERS.map(l => [l.id, l.on])), areaKey: 'pct_ber_e_to_g', busFast: false, rp: 100, fut: 'now', planY: 2026, planOnly: false, solo: true });
   let K = DEF(), touched = false, lastTouch = Date.now();
   let litB = new Set(), litA = new Set(), ready = false;
   const P = bus(m => { if (ready) onMsg(m); });
@@ -395,12 +395,28 @@
   setTgt('b');
 
   // ---------------------------------------------------------------- 03 layers
-  LAYERS.forEach(l => {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'k-tile'; b.dataset.id = l.id;
-    b.innerHTML = `<i style="background:${l.col}"></i><span><b>${esc(l.n)}</b><small>${esc(l.s)}</small></span>`;
-    b.onclick = () => { touch(); K.layers[l.id] = !K.layers[l.id]; syncTiles(); showLayers(); sendState(); };
-    $('#layerTiles').append(b);
+  // grouped, and by default one layer at a time over the roads and water, so the white model never turns to noise
+  const GROUPS = [['Water and drainage', ['water', 'opw', 'sewer', 'watermains']], ['Getting around', ['roads', 'buses', 'traffic', 'cycle']],
+    ['Town and growth', ['areas', 'zoning', 'planning', 'scheme']], ['Energy', ['power']], ['Heritage and nature', ['niah', 'mon', 'nature']], ['The model', ['relief', 'grid']]];
+  const BASE = new Set(['roads', 'water']);
+  const placed = new Set(GROUPS.flatMap(g => g[1]));
+  const extra = LAYERS.filter(l => !placed.has(l.id)).map(l => l.id); if (extra.length) GROUPS.push(['More', extra]);
+  const solo = () => K.solo !== false;
+  GROUPS.forEach(([title, ids]) => {
+    const ls = ids.map(id => LAYERS.find(l => l.id === id)).filter(Boolean); if (!ls.length) return;
+    const h = document.createElement('div'); h.className = 'k-lgroup'; h.textContent = title; $('#layerTiles').append(h);
+    ls.forEach(l => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'k-tile'; b.dataset.id = l.id;
+      b.innerHTML = `<i style="background:${l.col}"></i><span><b>${esc(l.n)}</b><small>${esc(l.s)}</small></span>`;
+      b.onclick = () => {
+        touch(); const on = !K.layers[l.id];
+        if (on && solo() && !BASE.has(l.id)) Object.keys(K.layers).forEach(k => { if (!BASE.has(k)) K.layers[k] = false; });
+        K.layers[l.id] = on; syncTiles(); showLayers(); sendState();
+      };
+      $('#layerTiles').append(b);
+    });
   });
+  $('#soloSeg').querySelectorAll('button').forEach(b => b.onclick = () => { touch(); K.solo = b.dataset.v === '1'; $('#soloSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
   const syncTiles = () => { document.querySelectorAll('.k-tile').forEach(b => b.setAttribute('aria-pressed', !!K.layers[b.dataset.id])); $('#busReal').setAttribute('aria-pressed', String(!K.busFast)); $('#busFast').setAttribute('aria-pressed', String(!!K.busFast)); };
   $('#busReal').onclick = () => { touch(); K.busFast = false; syncTiles(); showLayers(); sendState(); };
   $('#busFast').onclick = () => { touch(); K.busFast = true; syncTiles(); showLayers(); sendState(); };
@@ -513,7 +529,7 @@
   let holdT = 0, pin = '';
   const lock = $('#lock'), PINLEN = String(cfg.staffPin || '1234').length;
   const unhold = () => { clearTimeout(holdT); lock.classList.remove('holding'); };
-  lock.addEventListener('pointerdown', e => { e.preventDefault(); lock.classList.add('holding'); holdT = setTimeout(() => { unhold(); pin = ''; showPin(); $('#pinModal').hidden = false; }, 3000); });
+  lock.addEventListener('pointerdown', e => { e.preventDefault(); if (typeof storyStop === 'function' && story.on) { clearInterval(story.t); story.on = false; $('#story').hidden = true; $('#k').classList.remove('story-on'); } lock.classList.add('holding'); holdT = setTimeout(() => { unhold(); pin = ''; showPin(); $('#pinModal').hidden = false; }, 3000); });
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => lock.addEventListener(t, unhold));
   function showPin(bad) { $('#pinShow').textContent = '•'.repeat(pin.length) + '·'.repeat(Math.max(0, PINLEN - pin.length)); $('#pinShow').classList.toggle('bad', !!bad); }
   $('#pinPad').innerHTML = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'Clear', '0', 'Back'].map(k => `<button type="button" data-k="${k}"${k.length > 1 ? ' style="font-size:16px"' : ''}>${k}</button>`).join('');
@@ -539,7 +555,53 @@
     $('#result').innerHTML = '<span class="k-dim">Pick a question. The answer lights up on the model.</span>';
     $('#areaKey').value = K.areaKey; syncTiles(); tab('water'); water(true); homeView();
   }
-  setInterval(() => { if (touched && Date.now() - lastTouch > (+cfg.idleSeconds || 180) * 1000 && $('#staffModal').hidden) reset(); }, 5000);
+  setInterval(() => {
+    const idle = Date.now() - lastTouch;
+    // lastTouch moves only on a real touch, so the story's own changes never count as someone using the kiosk
+    const staffOpen = !$('#staffModal').hidden || !$('#pinModal').hidden;
+    if (cfg.story !== false) { if (!story.on && !staffOpen && idle > (+cfg.storyAfterSeconds || 40) * 1000) storyStart(); }
+    else if (touched && !staffOpen && idle > (+cfg.idleSeconds || 180) * 1000) reset();
+  }, 5000);
+
+  // ---------------------------------------------------------------- attract loop: a short story while nobody is using the kiosk
+  // Each step sets the water and one layer, and writes a caption from the data itself. A touch anywhere stops it.
+  const story = { on: false, i: 0, t: 0 };
+  const STEP_MS = (+cfg.storyStepSeconds || 9) * 1000;
+  function only(ids) { Object.keys(K.layers).forEach(k => { K.layers[k] = BASE.has(k); }); ids.forEach(id => { if (id in K.layers || LAYERS.some(l => l.id === id)) K.layers[id] = true; }); syncTiles(); }
+  function seaAt(level, rp, ids = []) { only(ids); K.src = 'coast'; K.level = level; K.rp = rp; water(true); const r = waterReached(); return summary(D, r); }
+  function noWater(ids) { only(ids); water(false); showLayers(); sendState(); }
+  const listNames = (a, n) => a.length <= n ? a.join(' and ').replace(/ and (?=.* and )/g, ', ') : a.slice(0, n).join(', ') + ' and others';
+  const STEPS = [
+    () => { const s = seaAt(0, 100); return ['Today', `A storm tide that comes once a century already reaches ${fmtN(s.count)} buildings in Sligo, along the quays and the river.`]; },
+    () => { const s = seaAt(0.5, 100); return ['About 2100: the sea 0.5 m higher', `The same storm then reaches ${fmtN(s.count)} buildings.`]; },
+    () => { const s = seaAt(1, 100); return ['About 2100: the sea 1 m higher', `${fmtN(s.count)} buildings and ${fmtN(s.homes)} homes are in the flood zone.`]; },
+    () => { const s = seaAt(2, 2); return ['The sea 2 m higher', `Then a storm tide expected every other winter reaches ${fmtN(s.count)} buildings.`]; },
+    NH && (() => { seaAt(1, 100, ['niah']); const hit = NH.items.filter(o => o.fz1), nat = [...new Set(hit.filter(o => o.rating === 'National').map(o => o.name))];
+      return ['Heritage in the water\'s way', `${fmtN(hit.length)} buildings in the National Inventory of Architectural Heritage stand in that flood zone${nat.length ? ', among them ' + listNames(nat, 3) : ''}.`]; }),
+    PW && (() => { seaAt(0, 100, ['power']); const n = PW.pts.filter(p => (p.k === 'sub' || p.k === 'tx') && p.fz).length;
+      return ['When the water reaches the wires', `${fmtN(n)} local substations and transformers are already inside today's flood zone. When one floods, the power cut reaches well beyond the water.`]; }),
+    NA && (() => { noWater(['nature']); const n = D.B.filter(b => b.properties.pz != null && b.properties.pz <= 50).length;
+      return ['The river is protected too', `The Garavogue is part of Lough Gill Special Area of Conservation. ${fmtN(n)} buildings stand within 50 m of a protected site.`]; }),
+    PL && (() => { K.planY = PL.last; K.planOnly = false; $('#planY').value = PL.last; noWater(['planning']); const g = PL.shown(PL.last, false), fz = g.filter(a => a.fz);
+      return ['Sligo keeps building', `Since 2017, ${fmtN(g.length)} planning permissions for about ${fmtN(g.reduce((t, a) => t + a.h, 0))} new homes. ${fmtN(fz.length)} of the sites are in today's flood zones.`]; }),
+    () => { only([]); K.src = 'sea'; K.level = 3; water(true); return ['As Water Arrives', 'Touch the screen to raise the water yourself, and ask the town your own questions.']; }
+  ].filter(Boolean);
+  function storyShow() {
+    const [h, t] = STEPS[story.i](); tab('water'); homeView();
+    $('#storyH').textContent = h; $('#storyT').textContent = t;
+    $('#storyDots').innerHTML = STEPS.map((_, j) => `<i${j === story.i ? ' class="on"' : ''}></i>`).join('');
+    $('#story').classList.remove('fade'); void $('#story').offsetWidth; $('#story').classList.add('fade');
+  }
+  function storyStart() {
+    if (story.on) return; story.on = true; story.i = 0; $('#story').hidden = false; $('#k').classList.add('story-on'); $('#insp').hidden = true;
+    storyShow(); story.t = setInterval(() => { story.i = (story.i + 1) % STEPS.length; storyShow(); }, STEP_MS);
+  }
+  function storyStop() {
+    if (!story.on) return; story.on = false; clearInterval(story.t); $('#story').hidden = true; $('#k').classList.remove('story-on');
+    K = DEF(); syncTiles(); tab('water'); water(true); touched = true; touch();
+  }
+  $('#story').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); storyStop(); });
+  $('#staffStory').onclick = () => { $('#staffModal').hidden = true; storyStart(); };
 
   // ---------------------------------------------------------------- go
   ready = true;

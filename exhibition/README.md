@@ -53,6 +53,12 @@ TomTom only gives traffic as it is now, so record a real weekday first:
 
 Recorded on another computer? **Export** there and **Import** on the exhibition computer. The recording stays in the browser; it isn't published with the website.
 
+## The story (attract loop)
+When nobody has touched the kiosk for `storyAfterSeconds` (40), it plays a short story on the kiosk and the model, one step every `storyStepSeconds` (9): today's 1-in-100-year storm tide, the sea 0.5, 1 and 2 m higher, heritage buildings in the water's way, substations in today's flood zone, the protected river, and planning since 2017, then an invitation to touch. The numbers in the captions come from the data. Any touch stops it and leaves the kiosk ready to use. Staff can start it from the staff panel (**Play the story now**); set `"story": false` in `config.json` to turn it off.
+
+## Layers
+**03 On the model** groups the layers (water and drainage, getting around, town and growth, energy, heritage and nature, the model). **One layer at a time** (the default) keeps roads and water as a base and swaps the rest, so the projected model stays readable; **Combine layers** lets visitors stack them.
+
 ## Staff
 - **Staff panel:** hold the bottom-right dot for 3 s, then enter the PIN (`staffPin` in `config.json`, `1234` to start). The PIN only keeps visitors out of the set-up: it sits in a public file, so it is not security.
 - **Staff panel buttons:** open the projector windows (both, when the Projection page is set to two), calibrate, go full screen, reset the kiosk, or leave exhibition mode.

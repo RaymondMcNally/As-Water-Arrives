@@ -82,6 +82,7 @@
       <!-- 03 layers -->
       <section class="k-pane" id="pLayers" hidden>
         <p class="k-lede">Switch layers on and off. Each one is projected onto the white model.</p>
+        <div class="k-seg k-seg-sm" id="soloSeg" role="group" aria-label="How many layers" style="margin-bottom:10px"><button type="button" data-v="1" aria-pressed="true">One layer at a time</button><button type="button" data-v="0" aria-pressed="false">Combine layers</button></div>
         <div class="k-tiles" id="layerTiles"></div>
         <div class="k-group">
           <span class="k-lab">Colour the census areas by</span>
@@ -153,6 +154,7 @@
       <button type="button" class="k-btn" id="goCal">Calibrate the projector</button>
       <button type="button" class="k-btn" id="full">Full screen</button>
       <button type="button" class="k-btn" id="resetNow">Reset the kiosk now</button>
+      <button type="button" class="k-btn" id="staffStory">Play the story now</button>
       <a class="k-btn" href="index.html">Leave exhibition mode</a>
       <button type="button" class="k-btn" id="staffBack">Back to the kiosk</button>
     </div>
@@ -162,6 +164,16 @@
       <p class="k-small" id="ttState"></p>
     </div>
   </div>
+</div>
+
+<div class="k-story" id="story" hidden>
+  <div class="k-story-card">
+    <div class="k-story-kicker">As Water Arrives · Sligo</div>
+    <h2 id="storyH"></h2>
+    <p id="storyT"></p>
+    <div class="k-story-dots" id="storyDots"></div>
+  </div>
+  <div class="k-story-touch">Touch anywhere to explore</div>
 </div>
 
 <div class="k-boot" id="boot"><b>As Water Arrives</b><span id="bootMsg">Loading Sligo…</span></div>

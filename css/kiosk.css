@@ -149,3 +149,21 @@ button, select, input { font: inherit; color: inherit }
 .k-coast .k-levelhead output { color: #8fa2ff; font-size: 28px }
 .k-coast .k-level input[type=range] { accent-color: #4f6dff }
 #rpSeg, #futSeg { margin-top: 10px }
+
+/* layer groups */
+.k-lgroup { grid-column: 1 / -1; font: 500 11px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--line) }
+.k-lgroup:first-child { margin-top: 0; padding-top: 0; border-top: 0 }
+/* attract loop: covers everything except the footer, so the staff button still works */
+.k-story { position: fixed; inset: 0 0 46px 0; z-index: 40; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; padding: 0 0 56px 40px; background: linear-gradient(90deg, rgba(5,13,16,.88), rgba(5,13,16,.55) 50%, rgba(5,13,16,.7)); cursor: pointer }
+.story-on #legend, .story-on #mapChip, .story-on #insp { visibility: hidden }
+.k-story-card { max-width: min(760px, 62vw) }
+.k-story-kicker { font: 500 13px "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: #8fd3ff; margin-bottom: 12px }
+.k-story h2 { font: 600 clamp(34px, 4.4vw, 64px)/1.05 "Fraunces", Georgia, serif; margin: 0 0 14px; color: #fff }
+.k-story p { font: 400 clamp(19px, 1.9vw, 28px)/1.35 "IBM Plex Sans", system-ui, sans-serif; color: #e6f1f3; margin: 0 }
+.k-story-dots { display: flex; gap: 8px; margin-top: 22px }
+.k-story-dots i { width: 28px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.25) }
+.k-story-dots i.on { background: #8fd3ff }
+.k-story-touch { position: absolute; right: 40px; bottom: 56px; font: 500 16px "IBM Plex Mono", monospace; color: #fff; padding: 12px 18px; border: 1px solid rgba(255,255,255,.5); border-radius: 999px; animation: k-pulse 2.4s ease-in-out infinite }
+@keyframes k-pulse { 50% { opacity: .45 } }
+.k-story.fade .k-story-card { animation: k-in .7s ease-out }
+@keyframes k-in { from { opacity: 0; transform: translateY(12px) } }

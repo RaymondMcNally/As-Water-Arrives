@@ -2,5 +2,8 @@
   "title": "As Water Arrives · Sligo borough model",
   "staffPin": "1234",
   "idleSeconds": 180,
-  "tomtomKey": ""
+  "tomtomKey": "",
+  "story": true,
+  "storyAfterSeconds": 40,
+  "storyStepSeconds": 9
 }
