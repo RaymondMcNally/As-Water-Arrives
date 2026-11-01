@@ -142,6 +142,17 @@
       map.addLayer({ id: u.id + '-out', type: 'circle', source: u.id + '-out', layout: { visibility: 'none' }, paint: { 'circle-radius': 5, 'circle-color': '#050d10', 'circle-stroke-color': u.col, 'circle-stroke-width': 2.2 } });
     }
   });
+  // water supply zones (which source feeds each part of town) and reservoirs, under the water mains
+  Object.values(UT).forEach(u => {
+    if (!u.zones.length) return;
+    map.addSource(u.id + '-zone', { type: 'geojson', data: { type: 'FeatureCollection', features: u.zones.map((z, i) => ({ type: 'Feature', properties: { i, col: AW.SUPPLY[z.src] || '#888' }, geometry: { type: 'MultiPolygon', coordinates: z.rings.map(r => [r.map(([e, n]) => fromITM(e, n))]) } })) } });
+    map.addLayer({ id: u.id + '-zone', type: 'fill', source: u.id + '-zone', layout: { visibility: 'none' }, paint: { 'fill-color': ['get', 'col'], 'fill-opacity': .22 } }, u.id);
+    map.addLayer({ id: u.id + '-zone-l', type: 'line', source: u.id + '-zone', layout: { visibility: 'none' }, paint: { 'line-color': ['get', 'col'], 'line-width': 1.2, 'line-opacity': .8 } }, u.id);
+    if (u.tanks.length) {
+      map.addSource(u.id + '-tank', { type: 'geojson', data: { type: 'FeatureCollection', features: u.tanks.map(([e, n]) => ({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: fromITM(e, n) } })) } });
+      map.addLayer({ id: u.id + '-tank', type: 'circle', source: u.id + '-tank', layout: { visibility: 'none' }, paint: { 'circle-radius': 7, 'circle-color': '#050d10', 'circle-stroke-color': u.col, 'circle-stroke-width': 3 } });
+    }
+  });
   // treatment plants: just beyond the edge of the model, so on the kiosk map only
   Object.values(UT).forEach(u => {
     if (!u.plants.length) return;
@@ -236,7 +247,7 @@
     const vis = (id, on) => map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
     vis('roads', K.layers.roads); vis('water', K.layers.water); vis('zoning', K.layers.zoning); vis('mon', K.layers.mon);
     vis('scheme', K.layers.scheme); vis('opw', K.layers.opw); vis('tiles', K.layers.grid); vis('hs', true); map.setPaintProperty('hs', 'raster-opacity', K.layers.relief ? .8 : .45);
-    vis('area-fill', K.layers.areas); trafficTick(); Object.values(UT).forEach(u => { vis(u.id, K.layers[u.id]); vis(u.id + '-flow', K.layers[u.id]); if (map.getLayer(u.id + '-out')) vis(u.id + '-out', K.layers[u.id]); if (map.getLayer(u.id + '-plant')) vis(u.id + '-plant', K.layers[u.id]); }); if (CY) { vis('cycle', K.layers.cycle); vis('cycle-park', K.layers.cycle); } planShow(); if (NA) ['nature-sac', 'nature-sac-l', 'nature-spa', 'nature-nha'].forEach(id => vis(id, K.layers.nature)); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses && !K.layers.traffic; busTick();
+    vis('area-fill', K.layers.areas); trafficTick(); Object.values(UT).forEach(u => { vis(u.id, K.layers[u.id]); vis(u.id + '-flow', K.layers[u.id]); if (map.getLayer(u.id + '-out')) vis(u.id + '-out', K.layers[u.id]); if (map.getLayer(u.id + '-plant')) vis(u.id + '-plant', K.layers[u.id]); ['-zone', '-zone-l', '-tank'].forEach(x => { if (map.getLayer(u.id + x)) vis(u.id + x, K.layers[u.id]); }); }); if (CY) { vis('cycle', K.layers.cycle); vis('cycle-park', K.layers.cycle); } planShow(); if (NA) ['nature-sac', 'nature-sac-l', 'nature-spa', 'nature-nha'].forEach(id => vis(id, K.layers.nature)); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses && !K.layers.traffic; busTick();
     if (K.layers.areas) { const cm = areaColours(D.A, K.areaKey), pairs = []; D.A.forEach(a => { const c = cm.get(a.properties[K.areaKey]); if (c) pairs.push(a.properties.sa_pub2022, c); });
       map.setPaintProperty('area-fill', 'fill-color', pairs.length ? ['match', ['get', 'sa_pub2022'], ...pairs, 'rgba(0,0,0,0)'] : 'rgba(0,0,0,0)'); }
     legend();
@@ -250,7 +261,7 @@
     if (K.layers.areas) areaColours(D.A, K.areaKey).legend.forEach(x => L.push(x));
     if (K.layers.scheme) L.push([C.scheme, 'Proposed Garavogue crossing']);
     if (K.layers.traffic) { (live() && !K.busFast ? TT.legend : TY.legend).forEach(x => L.push(x)); if (TT.key() && ttErr) L.push(['#555', 'Live TomTom data did not load (see staff panel)']); }
-    Object.values(UT).forEach(u => { if (K.layers[u.id]) { L.push([u.col, u.id === 'sewer' ? 'Sewer pipes (dashes flow downstream)' : u.name]); if (u.points.outfall.length) L.push([u.col, 'Sewer outfalls']); u.plants.forEach(p => L.push([u.col, `● ${p.name}${p.pe ? ` (built for ${fmtN(p.pe)} people)` : ''}, just outside the model`])); } });
+    Object.values(UT).forEach(u => { if (K.layers[u.id]) { L.push([u.col, u.id === 'sewer' ? 'Sewer pipes (dashes flow downstream)' : u.name]); if (u.points.outfall.length) L.push([u.col, 'Sewer outfalls']); if (u.zones.length) { const by = {}; u.zones.forEach(z => { by[z.srcName] = by[z.srcName] || [AW.SUPPLY[z.src], 0]; by[z.srcName][1]++; }); Object.entries(by).forEach(([n, [c, k]]) => L.push([c, `Supplied from ${n}: ${k} zone${k === 1 ? '' : 's'}`])); } if (u.tanks.length) L.push([u.col, `○ Reservoirs: ${u.tanks.length}`]); u.plants.forEach(p => L.push([u.col, `● ${p.name}${p.pe ? ` (built for ${fmtN(p.pe)} people)` : ''}, just outside the model`])); } });
     if (K.layers.cycle && CY) { Object.entries(AW.CYCLE).forEach(([k, [c, n]]) => { if (CY.km[k]) L.push([c, `${n}: ${fmtN(CY.km[k], 1)} km`]); }); L.push(['#ffffff', `Bike parking: ${CY.parking.length} places`]); }
     if (K.layers.nature && NA) NA.sites.forEach(st => L.push([AW.NATURE[st.k][0], `${AW.NATURE[st.k][1]}: ${st.name}, ${fmtN(st.hain)} ha in the circle`]));
     if (K.layers.planning && PL) Object.entries(AW.PLAN).forEach(([k, [c, n]]) => L.push([c, n]));
@@ -426,6 +437,7 @@
   map.on('click', e => {
     touch();
     if (PL && K.layers.planning) { const q = map.queryRenderedFeatures(e.point, { layers: ['plan-fill', 'plan-pt'] })[0]; if (q) return inspectP(q.properties.i); }
+    for (const u of Object.values(UT)) if (u.zones.length && K.layers[u.id]) { const q = map.queryRenderedFeatures(e.point, { layers: [u.id + '-zone'] })[0]; if (q) { const z = u.zones[q.properties.i]; $('#insp').innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>Water supply zone</h3><p style="margin:6px 0"><i style="display:inline-block;width:10px;height:10px;background:${AW.SUPPLY[z.src] || '#888'};border-radius:2px"></i> <b>${esc(z.name)}</b></p><span class="k-small k-dim">Supplied from ${esc(z.srcName)}. From the 2008 Sligo &amp; Environs water network model.</span>`; $('#insp').hidden = false; $('#insp .x').onclick = () => { $('#insp').hidden = true; }; return; } }
     if (NA && K.layers.nature) { const q = map.queryRenderedFeatures(e.point, { layers: ['nature-sac', 'nature-spa', 'nature-nha'] }); if (q.length) return inspectN([...new Set(q.map(x => x.properties.i))]); }
     const f = map.queryRenderedFeatures(e.point, { layers: ['b'] })[0]; if (f) return inspectB(f.id);
     const a = map.queryRenderedFeatures(e.point, { layers: ['area-fill', 'a-sel'] })[0]; if (a) return inspectA(a.id);

@@ -31,12 +31,14 @@
     J.sites.forEach(s => { s.rings = s.r.map(poly => poly.map(c => { const xy = []; for (let i = 0; i < c.length; i += 2) xy.push([c[i], c[i + 1]]); return xy; })); });
     return J;
   };
+  AW.SUPPLY = { FOX: '#3a86ff', K: '#ff9f1c', C: '#2ec4b6', F: '#c77dff' };           // water supply zones by source
   AW.utilities = async function () {
     const out = {};
     await Promise.all(Object.entries(NETS).map(async ([k, n]) => {
       const J = await AW.getJSON(n.file).catch(() => null); if (!J) return;
       const lines = J.pipes.map(p => { const c = p.c, xy = []; for (let i = 0; i < c.length; i += 2) xy.push([c[i], c[i + 1]]); const d = [0]; for (let i = 1; i < xy.length; i++) d.push(d[i - 1] + Math.hypot(xy[i][0] - xy[i - 1][0], xy[i][1] - xy[i - 1][1])); return { xy, d, f: p.f, len: d[d.length - 1] }; });
-      out[k] = Object.assign({ id: k, J, lines, points: { outfall: J.outfall || [], weir: J.weir || [] }, plants: J.plants || [] }, n);
+      const zones = (J.zones || []).map(z => Object.assign(z, { rings: z.r.map(c => { const xy = []; for (let i = 0; i < c.length; i += 2) xy.push([c[i], c[i + 1]]); return xy; }) }));
+      out[k] = Object.assign({ id: k, J, lines, points: { outfall: J.outfall || [], weir: J.weir || [] }, plants: J.plants || [], zones, tanks: J.tanks || [] }, n);
     }));
     return out;
   };

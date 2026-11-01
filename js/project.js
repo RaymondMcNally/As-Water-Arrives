@@ -139,8 +139,11 @@
       }
       if (L.buses) { tx.lineCap = 'round'; tx.lineJoin = 'round'; tx.lineWidth = 7 * k; tx.globalAlpha = .9; BUS.lines.forEach(l => { tx.strokeStyle = BUS.routes[l.r].col; tx.beginPath(); l.x.forEach((x, i) => { const [a, b] = P(x, l.y[i]); i ? tx.lineTo(a, b) : tx.moveTo(a, b); }); tx.stroke(); }); tx.globalAlpha = 1; }
       Object.values(UT).forEach(u => {                                 // underground networks: pipes 3 m wide (1.2 mm), outfalls as rings
-        if (!L[u.id]) return; tx.strokeStyle = u.col; tx.lineWidth = 3 * k; tx.lineCap = 'round'; tx.lineJoin = 'round';
+        if (!L[u.id]) return;
+        u.zones.forEach(z => z.rings.forEach(r => { const g = { type: 'Polygon', coordinates: [r] }; fill(g, AW.SUPPLY[z.src] || '#888', .3); tx.strokeStyle = AW.SUPPLY[z.src] || '#888'; tx.lineWidth = 3 * k; tx.beginPath(); path(g); tx.stroke(); }));
+        tx.strokeStyle = u.col; tx.lineWidth = 3 * k; tx.lineCap = 'round'; tx.lineJoin = 'round';
         tx.beginPath(); u.lines.forEach(l => l.xy.forEach(([E, N], i) => { const [a, b] = P(E, N); i ? tx.lineTo(a, b) : tx.moveTo(a, b); })); tx.stroke();
+        tx.fillStyle = '#ffffff'; u.tanks.forEach(([E, N]) => { const [a, b] = P(E, N); tx.beginPath(); tx.arc(a, b, 16 * k, 0, 7); tx.fill(); });
         tx.lineWidth = 4 * k; u.points.outfall.forEach(([E, N]) => { const [a, b] = P(E, N); tx.beginPath(); tx.arc(a, b, 14 * k, 0, 7); tx.stroke(); });
       });
       if (L.cycle && CYC) {                                              // cycle routes: 8 m wide (3 mm), tracks 10 m, over dimmed roads; bike parking as dots
