@@ -24,6 +24,14 @@
     J.shown = (y, only) => J.apps.filter(a => a.dec === 'granted' && (only ? Math.max(a.y, J.first) === y : a.y <= y));
     return J;
   };
+  // new homes sold (data/newhomes.json): Property Price Register new-dwelling sales in the circle, counted by place; no addresses or prices
+  AW.NEWHOMES = [[2010, 2014, '#94d2bd', '2010–2014'], [2015, 2019, '#e9d8a6', '2015–2019'], [2020, 2023, '#ee9b00', '2020–2023'], [2024, 2099, '#ff4d6d', '2024 on']];
+  AW.newHomeCol = y => (AW.NEWHOMES.find(b => y >= b[0] && y <= b[1]) || AW.NEWHOMES[0])[2];
+  AW.newhomes = async function () {
+    const J = await AW.getJSON('data/newhomes.json').catch(() => null); if (!J) return null;
+    J.places.forEach(p => { let t = 0, h = p.n / 2; p.ym = p.y0; for (const [y, c] of Object.entries(p.by)) { t += c; if (t >= h) { p.ym = +y; break; } } });   // median year of sale
+    return J;
+  };
   // Sligo County Council land registers (data/registers.json): Vacant Sites Register (2024) and the Residential Zoned Land Tax map (2026)
   AW.VACANT = ['#ff2e63', 'Vacant Sites Register (Sligo County Council, 2024)'];
   AW.RZLT = { new: ['#ffd166', 'New residential land'], infill: ['#b39ddb', 'Existing residential and infill land'], centre: ['#ff9f43', 'Town centre land'], mixed: ['#4dd0e1', 'Mixed-use and neighbourhood centre land'] };
