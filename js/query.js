@@ -72,7 +72,7 @@
     { g: 'water', n: 'In the OPW 1-in-10-year flood zone', s: 'River flood map: a 10% chance each year', q: { target: 'b', conditions: [{ field: 'op', op: '>=', value: 10 }] }, flood: { src: 'opw', level: 10 } },
     { g: 'water', n: 'In the OPW 1-in-100-year flood zone', s: 'River flood map: a 1% chance each year', q: { target: 'b', conditions: [{ field: 'op', op: '>=', value: 1 }] }, flood: { src: 'opw', level: 1 } },
     { g: 'water', n: 'Sea 1 m higher: a 1-in-100-year storm', s: 'OPW high-end future, about 2100', q: { target: 'b', conditions: [{ field: 'cf100', op: '<=', value: 1 }] }, flood: { src: 'coast', level: 1, rp: 100 } },
-    { g: 'water', n: 'Sea 0.5 m higher: an ordinary winter tide', s: 'OPW mid-range future: the 1-in-2-year tide, about 2100', q: { target: 'b', conditions: [{ field: 'cf2', op: '<=', value: 0.5 }] }, flood: { src: 'coast', level: 0.5, rp: 2 } },
+    { g: 'water', n: 'Sea 0.5 m higher: a storm tide every other year', s: 'OPW mid-range future, about 2100: a flood with a 1-in-2 chance each year', q: { target: 'b', conditions: [{ field: 'cf2', op: '<=', value: 0.5 }] }, flood: { src: 'coast', level: 0.5, rp: 2 } },
     { g: 'water', n: 'Homes within 50 m of water', s: 'River, harbour, bay and lake edge', q: { target: 'b', conditions: [{ field: 'nr', op: '>', value: 0 }, { field: 'dw', op: '<=', value: 50 }] } },
     { g: 'water', n: 'Built below 4 m OD', s: 'Ground floor lower than four metres above mean sea level', q: { target: 'b', conditions: [{ field: 'gr', op: '<', value: 4 }] } },
     { g: 'water', n: 'Vacant buildings by the water', s: 'Within 100 m of the river, harbour or lake', q: { target: 'b', conditions: [{ field: 'nv', op: '>', value: 0 }, { field: 'dw', op: '<=', value: 100 }] } },
