@@ -556,7 +556,7 @@
       if (q) { const p = NW.places[q.properties.i], yrs = Object.entries(p.by).map(([y, c]) => `${y}: ${c}`).join(' · ');
         $('#insp').innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>${esc(p.name)}</h3><span class="k-dim"><i style="display:inline-block;width:10px;height:10px;background:${AW.newHomeCol(p.ym)};border-radius:2px"></i> ${fmtN(p.n)} home${p.n === 1 ? '' : 's'} sold new, ${p.y0 === p.y1 ? p.y0 : p.y0 + '–' + p.y1}</span>
           ${p.estates.length > 1 ? `<p class="k-small" style="margin:8px 0 0">Also recorded as: ${esc(p.estates.slice(1).join(', '))}</p>` : ''}<p class="k-small" style="margin:8px 0">${esc(yrs)}</p>
-          ${p.approx ? `<p class="k-small" style="color:#ffd166">Not on the map yet: placed at ${esc(p.area)}, so the spot is approximate.</p>` : p.how === 'plan' ? '<p class="k-small k-dim">Placed at the planning permission that built it.</p>' : ''}
+          ${p.approx ? `<p class="k-small" style="color:#ffd166">Not on the map yet: placed at ${esc(p.area)}, so the spot is approximate.</p>` : p.how === 'plan' ? '<p class="k-small k-dim">Placed at the planning permission that built it.</p>' : p.how === 'pin' ? '<p class="k-small k-dim">Too new for the maps: placed from a location checked locally.</p>' : ''}
           <p class="k-small k-dim">Property Price Register: sales described as new dwellings (sold with VAT). Homes built for the Council or housing bodies and never sold on the open market are not in it.</p>`;
         $('#insp').hidden = false; $('#insp .x').onclick = () => { $('#insp').hidden = true; }; return; } }
     if (RG && K.layers.land) {
