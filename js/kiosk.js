@@ -37,7 +37,7 @@
     { id: 'buses', n: 'Town buses', s: 'S1, S2 and S3, from the timetable', col: '#ff4f7b', on: false },
     { id: 'traffic', n: 'Traffic', s: 'Main roads, typical for the time of day', col: '#e53935', on: false }
   ];
-  const DEF = () => ({ tab: 'water', src: 'sea', level: 3.0, flood: true, preset: -1, query: null, layers: Object.fromEntries(LAYERS.map(l => [l.id, l.on])), areaKey: 'pct_ber_e_to_g', busFast: false, rp: 100, fut: 'now' });
+  const DEF = () => ({ tab: 'water', src: 'sea', level: 3.0, flood: true, preset: -1, query: null, layers: Object.fromEntries(LAYERS.map(l => [l.id, l.on])), areaKey: 'pct_ber_e_to_g', busFast: false, rp: 100, fut: 'now', planY: 2026, planOnly: false });
   let K = DEF(), touched = false, lastTouch = Date.now();
   let litB = new Set(), litA = new Set(), ready = false;
   const P = bus(m => { if (ready) onMsg(m); });
@@ -47,6 +47,7 @@
   const BUS = await AW.buses();
   const UT = await AW.utilities();
   Object.values(UT).forEach(u => LAYERS.push({ id: u.id, n: u.name, s: u.sub, col: u.col, on: false }));
+  const PL = await AW.planning(); if (PL) LAYERS.push({ id: 'planning', n: 'Planning permissions', s: 'Granted since 2017, year by year', col: AW.PLAN.homes[0], on: false });
   const CY = await AW.cycling(); if (CY) LAYERS.push({ id: 'cycle', n: 'Cycle routes', s: 'Tracks, shared paths and lanes', col: AW.CYCLE.track[0], on: false });
   const TT = AW.traffic; TT.setConfigKey(cfg.tomtomKey); let ttB = -1, ttErr = '', ttRetry = 0;
   const TY = AW.typicalTraffic, RC = AW.trafficRec; let tyStep = null;
@@ -152,6 +153,35 @@
     map.addSource('cycle-park', { type: 'geojson', data: { type: 'FeatureCollection', features: CY.parking.map(([e, n]) => ({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: fromITM(e, n) } })) } });
     map.addLayer({ id: 'cycle-park', type: 'circle', source: 'cycle-park', layout: { visibility: 'none' }, paint: { 'circle-radius': 3.5, 'circle-color': '#ffffff', 'circle-stroke-color': AW.CYCLE.track[0], 'circle-stroke-width': 1.5 } });
   }
+  if (PL) {                                                          // planning permissions: site outlines (and points for the few without one)
+    const feats = PL.apps.map((a, i) => ({ type: 'Feature', id: i, properties: { i, k: a.k, col: AW.PLAN[a.k][0], y: Math.max(a.y, PL.first), g: a.dec === 'granted' ? 1 : 0 },
+      geometry: a.rings ? { type: 'Polygon', coordinates: a.rings.map(r => r.map(([e, n]) => fromITM(e, n))) } : { type: 'Point', coordinates: fromITM(...a.p) } }));
+    map.addSource('plan', { type: 'geojson', data: { type: 'FeatureCollection', features: feats } });
+    map.addLayer({ id: 'plan-fill', type: 'fill', source: 'plan', filter: ['==', 'g', -1], layout: { visibility: 'none' }, paint: { 'fill-color': ['get', 'col'], 'fill-opacity': ['case', ['==', ['get', 'y'], ['literal', 0]], .95, .6] } }, 'b');
+    map.addLayer({ id: 'plan-line', type: 'line', source: 'plan', filter: ['==', 'g', -1], layout: { visibility: 'none' }, paint: { 'line-color': ['get', 'col'], 'line-width': 1.5 } });
+    map.addLayer({ id: 'plan-pt', type: 'circle', source: 'plan', filter: ['==', 'g', -1], layout: { visibility: 'none' }, paint: { 'circle-radius': 5, 'circle-color': ['get', 'col'], 'circle-stroke-color': '#050d10', 'circle-stroke-width': 1 } });
+  }
+  function planShow() {
+    if (!PL) return; const on = K.layers.planning, y = K.planY;
+    ['plan-fill', 'plan-line', 'plan-pt'].forEach(id => map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none'));
+    $('#planCtl').hidden = !on; if (!on) return;
+    const yf = K.planOnly ? ['==', ['get', 'y'], y] : ['<=', ['get', 'y'], y], base = ['all', ['==', ['get', 'g'], 1], yf];
+    map.setFilter('plan-fill', ['all', base, ['==', ['geometry-type'], 'Polygon']]); map.setFilter('plan-line', ['all', base, ['==', ['geometry-type'], 'Polygon']]); map.setFilter('plan-pt', ['all', base, ['==', ['geometry-type'], 'Point']]);
+    map.setPaintProperty('plan-fill', 'fill-opacity', ['case', ['==', ['get', 'y'], y], .95, .45]);
+    const sh = PL.shown(y, K.planOnly), yr = PL.shown(y, true), hm = a => a.reduce((t, x) => t + x.h, 0), fz = sh.filter(a => a.fz);
+    $('#planOut').textContent = K.planOnly ? String(y) : (y === PL.first ? String(y) : `${PL.first}–${y}`);
+    $('#planStats').innerHTML = `
+      <div class="k-stat hot"><b>${fmtN(sh.length)}</b><span>permissions granted${K.planOnly ? ' in ' + y : ''}</span></div>
+      <div class="k-stat"><b>${fmtN(hm(sh))}</b><span>new homes in them</span></div>
+      <div class="k-stat"><b>${fmtN(yr.length)}</b><span>granted in ${y}, for ${fmtN(hm(yr))} homes</span></div>
+      <div class="k-stat"><b>${fmtN(fz.length)}</b><span>in today's OPW 1-in-100-year flood zones (${fmtN(hm(fz))} homes)</span></div>`;
+  }
+  let planTimer = 0;
+  function planPlay(on) {
+    clearInterval(planTimer); planTimer = 0; $('#planPlay').textContent = on ? '❚❚ Pause' : '▶ Play';
+    if (!on) return; if (K.planY >= PL.last) K.planY = PL.first - 1;
+    planTimer = setInterval(() => { touch(); K.planY++; if (K.planY >= PL.last) { K.planY = PL.last; planPlay(false); } $('#planY').value = K.planY; planShow(); legend(); sendState(); }, 1300);
+  }
   const DASH = [[0, 4, 3], [0.5, 4, 2.5], [1, 4, 2], [1.5, 4, 1.5], [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0], [0, 0.5, 3, 3.5], [0, 1, 3, 3], [0, 1.5, 3, 2.5], [0, 2, 3, 2], [0, 2.5, 3, 1.5], [0, 3, 3, 1], [0, 3.5, 3, 0.5]];
   let dashI = 0;
   setInterval(() => { dashI = (dashI + 1) % DASH.length; Object.values(UT).forEach(u => { if (K.layers[u.id]) map.setPaintProperty(u.id + '-flow', 'line-dasharray', DASH[dashI]); }); }, 90);
@@ -197,7 +227,7 @@
     const vis = (id, on) => map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
     vis('roads', K.layers.roads); vis('water', K.layers.water); vis('zoning', K.layers.zoning); vis('mon', K.layers.mon);
     vis('scheme', K.layers.scheme); vis('opw', K.layers.opw); vis('tiles', K.layers.grid); vis('hs', true); map.setPaintProperty('hs', 'raster-opacity', K.layers.relief ? .8 : .45);
-    vis('area-fill', K.layers.areas); trafficTick(); Object.values(UT).forEach(u => { vis(u.id, K.layers[u.id]); vis(u.id + '-flow', K.layers[u.id]); if (map.getLayer(u.id + '-out')) vis(u.id + '-out', K.layers[u.id]); if (map.getLayer(u.id + '-plant')) vis(u.id + '-plant', K.layers[u.id]); }); if (CY) { vis('cycle', K.layers.cycle); vis('cycle-park', K.layers.cycle); } vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses && !K.layers.traffic; busTick();
+    vis('area-fill', K.layers.areas); trafficTick(); Object.values(UT).forEach(u => { vis(u.id, K.layers[u.id]); vis(u.id + '-flow', K.layers[u.id]); if (map.getLayer(u.id + '-out')) vis(u.id + '-out', K.layers[u.id]); if (map.getLayer(u.id + '-plant')) vis(u.id + '-plant', K.layers[u.id]); }); if (CY) { vis('cycle', K.layers.cycle); vis('cycle-park', K.layers.cycle); } planShow(); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses && !K.layers.traffic; busTick();
     if (K.layers.areas) { const cm = areaColours(D.A, K.areaKey), pairs = []; D.A.forEach(a => { const c = cm.get(a.properties[K.areaKey]); if (c) pairs.push(a.properties.sa_pub2022, c); });
       map.setPaintProperty('area-fill', 'fill-color', pairs.length ? ['match', ['get', 'sa_pub2022'], ...pairs, 'rgba(0,0,0,0)'] : 'rgba(0,0,0,0)'); }
     legend();
@@ -213,6 +243,7 @@
     if (K.layers.traffic) { (live() && !K.busFast ? TT.legend : TY.legend).forEach(x => L.push(x)); if (TT.key() && ttErr) L.push(['#555', 'Live TomTom data did not load (see staff panel)']); }
     Object.values(UT).forEach(u => { if (K.layers[u.id]) { L.push([u.col, u.id === 'sewer' ? 'Sewer pipes (dashes flow downstream)' : u.name]); if (u.points.outfall.length) L.push([u.col, 'Sewer outfalls']); u.plants.forEach(p => L.push([u.col, `● ${p.name}${p.pe ? ` (built for ${fmtN(p.pe)} people)` : ''}, just outside the model`])); } });
     if (K.layers.cycle && CY) { Object.entries(AW.CYCLE).forEach(([k, [c, n]]) => { if (CY.km[k]) L.push([c, `${n}: ${fmtN(CY.km[k], 1)} km`]); }); L.push(['#ffffff', `Bike parking: ${CY.parking.length} places`]); }
+    if (K.layers.planning && PL) Object.entries(AW.PLAN).forEach(([k, [c, n]]) => L.push([c, n]));
     if (K.layers.buses) BUS.routes.forEach(r => L.push([r.col, `Bus ${r.id}: ${r.name.replace(/ - /g, ' – ')}`]));
     $('#legend').innerHTML = L.map(([c, t]) => `<div><i style="background:${c}"></i>${esc(t)}</div>`).join('') + (K.layers.buses ? '<div class="k-busclock" id="busClock"></div>' : '') + (K.layers.traffic ? (live() && !K.busFast ? '<div class="k-busclock">Traffic © TomTom, live, updated every 5 minutes</div>' : '<div class="k-busclock" id="typClock"></div>') : '');
     tyStep = null;
@@ -323,6 +354,13 @@
   const syncTiles = () => { document.querySelectorAll('.k-tile').forEach(b => b.setAttribute('aria-pressed', !!K.layers[b.dataset.id])); $('#busReal').setAttribute('aria-pressed', String(!K.busFast)); $('#busFast').setAttribute('aria-pressed', String(!!K.busFast)); };
   $('#busReal').onclick = () => { touch(); K.busFast = false; syncTiles(); showLayers(); sendState(); };
   $('#busFast').onclick = () => { touch(); K.busFast = true; syncTiles(); showLayers(); sendState(); };
+  if (PL) {
+    $('#planY').min = PL.first; $('#planY').max = PL.last; $('#planY').value = K.planY = PL.last;
+    $('#planTicks').innerHTML = Array.from({ length: PL.last - PL.first + 1 }, (_, i) => `<span>${String(PL.first + i).slice(2)}</span>`).join('');
+    $('#planY').oninput = e => { touch(); planPlay(false); K.planY = +e.target.value; planShow(); sendState(); };
+    $('#planPlay').onclick = () => { touch(); planPlay(!planTimer); };
+    $('#planMode').querySelectorAll('button').forEach(b => b.onclick = () => { touch(); K.planOnly = b.dataset.v === 'only'; $('#planMode').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); planShow(); sendState(); });
+  }
   function busTick() {
     if (K.layers.traffic) typTick();
     if (!K.layers.buses) return;
@@ -353,6 +391,15 @@
         ['Vacant homes', p.nvr ? fmtN(p.nvr) : null], ['Vacant commercial', p.nvc ? fmtN(p.nvc) : null]])}`;
     $('#insp').hidden = false; $('#insp .x').onclick = () => { $('#insp').hidden = true; };
   }
+  function inspectP(i) {
+    const a = PL.apps[i], [c, n] = AW.PLAN[a.k];
+    $('#insp').innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>Planning ${esc(a.app)}</h3>
+      <span class="k-dim"><i style="display:inline-block;width:10px;height:10px;background:${c};border-radius:2px"></i> ${esc(n)} · ${esc(a.type)} · decided ${a.y}${a.h ? ' · ' + fmtN(a.h) + ' home' + (a.h === 1 ? '' : 's') : ''}</span>
+      <p class="k-small" style="margin:8px 0">${esc(a.d)}${a.d.length >= 220 ? '…' : ''}</p>
+      ${a.fz ? '<p class="k-small" style="color:#9ec9ff">Inside today\'s OPW 1-in-100-year flood zone.</p>' : a.fz1 ? '<p class="k-small" style="color:#9ec9ff">Inside the OPW 1-in-100-year sea flood zone with the sea 1 m higher (about 2100).</p>' : ''}
+      <p class="k-small k-dim">Sligo County Council ePlanning record ${esc(a.app)}. Planning permission is not the same as a building started.</p>`;
+    $('#insp').hidden = false; $('#insp .x').onclick = () => { $('#insp').hidden = true; };
+  }
   function inspectA(i) {
     const p = D.A[i].properties;
     $('#insp').innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>Census area ${esc(p.sa_pub2022)}</h3><span class="k-dim">${esc(p.ed_english || '')} · ${esc(p.dep_label || '')}</span>
@@ -361,6 +408,7 @@
   }
   map.on('click', e => {
     touch();
+    if (PL && K.layers.planning) { const q = map.queryRenderedFeatures(e.point, { layers: ['plan-fill', 'plan-pt'] })[0]; if (q) return inspectP(q.properties.i); }
     const f = map.queryRenderedFeatures(e.point, { layers: ['b'] })[0]; if (f) return inspectB(f.id);
     const a = map.queryRenderedFeatures(e.point, { layers: ['area-fill', 'a-sel'] })[0]; if (a) return inspectA(a.id);
     $('#insp').hidden = true;
@@ -369,7 +417,7 @@
   // ---------------------------------------------------------------- the projector
   function sendState() {
     touched = true;
-    P.send({ t: 'kiosk', s: { flood: K.flood ? { src: K.src, level: K.level, rp: K.rp, fut: K.fut } : null, sel: { tgt: litA.size ? 'a' : 'b', ids: litA.size ? [...litA] : [...litB] }, layers: K.layers, areaKey: K.areaKey, busFast: K.busFast } });
+    P.send({ t: 'kiosk', s: { flood: K.flood ? { src: K.src, level: K.level, rp: K.rp, fut: K.fut } : null, sel: { tgt: litA.size ? 'a' : 'b', ids: litA.size ? [...litA] : [...litB] }, layers: K.layers, areaKey: K.areaKey, busFast: K.busFast, planY: K.planY, planOnly: K.planOnly } });
   }
   function onMsg(m) {
     if (m.t === 'hello' && m.who === 'out') { outs.add(m.i || 0); link(); sendState(); }

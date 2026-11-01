@@ -14,6 +14,16 @@
     J.lines.forEach(l => { const c = l.c; l.xy = []; for (let i = 0; i < c.length; i += 2) l.xy.push([c[i], c[i + 1]]); });
     return J;
   };
+  // planning permissions (data/planning.json): types and colours, and a loader
+  AW.PLAN = { homes: ['#ff6b6b', 'New homes'], ext: ['#f9c74f', 'Extensions and alterations'], change: ['#b388ff', 'Change of use'], com: ['#2ec4b6', 'Commercial and community'], minor: ['#9aa5b1', 'Signs and minor works'] };
+  AW.planning = async function () {
+    const J = await AW.getJSON('data/planning.json').catch(() => null); if (!J) return null;
+    J.apps.forEach(a => { if (a.r) a.rings = a.r.map(c => { const xy = []; for (let i = 0; i < c.length; i += 2) xy.push([c[i], c[i + 1]]); return xy; }); });
+    J.first = 2017; J.last = J.years[1];
+    // what the timeline shows at year y: granted up to y (or in y only); earlier permissions count from the first year
+    J.shown = (y, only) => J.apps.filter(a => a.dec === 'granted' && (only ? Math.max(a.y, J.first) === y : a.y <= y));
+    return J;
+  };
   AW.utilities = async function () {
     const out = {};
     await Promise.all(Object.entries(NETS).map(async ([k, n]) => {
