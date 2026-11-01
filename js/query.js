@@ -7,6 +7,9 @@
     h: { l: 'Height', t: 'num', unit: 'm' }, fp: { l: 'Footprint', t: 'num', unit: 'm²' }, gr: { l: 'Ground level', t: 'num', unit: 'm OD', d: 1 },
     fs: { l: 'Sea level that first reaches it', t: 'num', unit: 'm OD', d: 1 }, fl: { l: 'Lough Gill level that first reaches it', t: 'num', unit: 'm OD', d: 1 },
     dw: { l: 'Distance to water', t: 'num', unit: 'm' }, op: { l: 'OPW river flood zone (% chance a year; 10 = most likely)', t: 'num' },
+    cf2: { l: 'OPW sea about 2100: rise at which a 1-in-2-year tide reaches it', t: 'num', unit: 'm', d: 1 }, cf20: { l: 'OPW sea about 2100: rise at which a 1-in-20-year flood reaches it', t: 'num', unit: 'm', d: 1 },
+    cf100: { l: 'OPW sea about 2100: rise at which a 1-in-100-year flood reaches it', t: 'num', unit: 'm', d: 1 },
+    om: { l: 'OPW river flood zone, mid-range future (% a year)', t: 'num' }, oh: { l: 'OPW river flood zone, high-end future (% a year)', t: 'num' },
     na: { l: 'Addresses', t: 'num' }, nr: { l: 'Homes', t: 'num' }, nc: { l: 'Commercial units', t: 'num' },
     nv: { l: 'Vacant addresses', t: 'num' }, nvr: { l: 'Vacant homes', t: 'num' }, nvc: { l: 'Vacant commercial units', t: 'num' },
     uc: { l: 'Under construction', t: 'num' }, py: { l: 'Last sale year', t: 'num' }
@@ -68,6 +71,8 @@
     { g: 'water', n: 'Reached if Lough Gill rose to 6 m OD', s: 'About two metres above its usual level', q: { target: 'b', conditions: [{ field: 'fl', op: '<=', value: 6 }] }, flood: { src: 'lake', level: 6 } },
     { g: 'water', n: 'In the OPW 1-in-10-year flood zone', s: 'River flood map: a 10% chance each year', q: { target: 'b', conditions: [{ field: 'op', op: '>=', value: 10 }] }, flood: { src: 'opw', level: 10 } },
     { g: 'water', n: 'In the OPW 1-in-100-year flood zone', s: 'River flood map: a 1% chance each year', q: { target: 'b', conditions: [{ field: 'op', op: '>=', value: 1 }] }, flood: { src: 'opw', level: 1 } },
+    { g: 'water', n: 'Sea 1 m higher: a 1-in-100-year storm', s: 'OPW high-end future, about 2100', q: { target: 'b', conditions: [{ field: 'cf100', op: '<=', value: 1 }] }, flood: { src: 'coast', level: 1, rp: 100 } },
+    { g: 'water', n: 'Sea 0.5 m higher: an ordinary winter tide', s: 'OPW mid-range future: the 1-in-2-year tide, about 2100', q: { target: 'b', conditions: [{ field: 'cf2', op: '<=', value: 0.5 }] }, flood: { src: 'coast', level: 0.5, rp: 2 } },
     { g: 'water', n: 'Homes within 50 m of water', s: 'River, harbour, bay and lake edge', q: { target: 'b', conditions: [{ field: 'nr', op: '>', value: 0 }, { field: 'dw', op: '<=', value: 50 }] } },
     { g: 'water', n: 'Built below 4 m OD', s: 'Ground floor lower than four metres above mean sea level', q: { target: 'b', conditions: [{ field: 'gr', op: '<', value: 4 }] } },
     { g: 'water', n: 'Vacant buildings by the water', s: 'Within 100 m of the river, harbour or lake', q: { target: 'b', conditions: [{ field: 'nv', op: '>', value: 0 }, { field: 'dw', op: '<=', value: 100 }] } },
@@ -82,7 +87,7 @@
   ];
 
   // colours: the same in the kiosk and on the model
-  const C = { match: '#ffb000', water: '#2f8fd8', sea: '#3fa9f5', lake: '#36c6d3', opw: '#8f86ff', opwBands: { 10: '#6f63ff', 5: '#9b8cff', 1: '#c9c0ff' }, road: '#ffffff', scheme: '#ff6a2a', dim: '#16232a' };
+  const C = { match: '#ffb000', water: '#2f8fd8', sea: '#3fa9f5', lake: '#36c6d3', opw: '#8f86ff', coast: '#4f6dff', opwBands: { 10: '#6f63ff', 5: '#9b8cff', 1: '#c9c0ff' }, road: '#ffffff', scheme: '#ff6a2a', dim: '#16232a' };
   const RAMP = ['#0d2a33', '#124c5c', '#1b7a8f', '#3fb0c4', '#9fe6f0'], HOT = ['#0f1f26', '#3a2a1c', '#8a4b12', '#d98a0b', '#ffd36a'], DIV = ['#ff5a45', '#b0513d', '#4b5960', '#2c7f93', '#5fd4e6'];
   function areaColours(A, key) {
     const f = AF[key] || {}; const vals = A.map(a => a.properties[key]);

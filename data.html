@@ -46,6 +46,7 @@
       <tr><td>Town buses</td><td>Bus Éireann timetable (GTFS), National Transport Authority / Transport for Ireland</td><td>Routes S1, S2 and S3 on a weekday, a Saturday and a Sunday in March 2027. Each dot is where the timetable puts a bus, moving evenly along its route line between stops; it is not a live position.</td></tr>
       <tr><td>Traffic</td><td>Modelled from a typical Irish urban hourly count profile and the OpenStreetMap road class; optionally live from TomTom</td><td>Typical traffic, not measured: each main road's busyness for the time of day (weekday, Saturday or Sunday) is the share of the day's traffic in that hour × a weight for its class, with a little more near the town centre. It shows when roads are usually busy, not what is happening now. With a TomTom key the layer shows live flow instead, and "A day in 3 minutes" replays a weekday recorded from TomTom every 15 minutes on the exhibition computer (kept in that browser, not published here).</td></tr>
       <tr><td>Sewers and water mains</td><td>Sligo County Council: Sligo &amp; Environs sewer network (2008) and Water Services GIS public water pipes (2007); networks now operated by Uisce Éireann</td><td>Historic records, not a guide to where pipes are today. The sewer file was moved 6.5 m west and 5 m north to fit the building footprints; each sewer pipe runs downstream as its flow arrows show. Treatment plants just outside the model are shown on the kiosk map.</td></tr>
+      <tr><td>Sea-level rise and future river floods</td><td>OPW: National Coastal Flood Hazard Mapping 2021 (future scenarios) and the NIFM/CFRAM river flood extents, mid-range and high-end futures; floodinfo.ie / data.gov.ie, CC BY 4.0</td><td>Coastal: the sea about 2100 at +0.5 m (mid-range), +1.0 m (high-end), +1.5 m (high+) and +2.0 m (high++), each at 1 in 2, 20 and 100 years. River: mid-range and high-end futures at 1 in 10, 100 and 1,000 years. Clipped to the circle; each building records the smallest rise that reaches it. Indicative; see floodinfo.ie for the official maps.</td></tr>
       <tr><td>Live water levels</td><td>OPW waterlevel.ie, CC BY 4.0</td><td>Shown on the kiosk when the browser can reach the feed.</td></tr>
     </table></div>
   </div>
@@ -68,6 +69,7 @@
         <tr><td><code>data/areas.json</code>, <code>zoning.json</code></td><td>Census small areas; development plan zoning</td></tr>
         <tr><td><code>data/buses.json</code></td><td>Town bus routes (ITM) and every timetabled trip on the three sample days</td></tr>
         <tr><td><code>data/sewer.json</code>, <code>watermains.json</code></td><td>Sewer pipes (downstream order), outfalls and plants; water mains (ITM)</td></tr>
+        <tr><td><code>data/opw_future.json</code></td><td>OPW future flood extents: sea-level rise and the river's futures</td></tr>
         <tr><td><code>data/model.json</code></td><td>The circle, the 52 tiles and the proposed crossing</td></tr>
         <tr><td><code>data/model/dtm2m.bin</code></td><td>The ground: 2,051 × 2,051 Int16 centimetres, 2 m, origin in <code>terrain.json</code></td></tr>
       </table></div>

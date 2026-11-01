@@ -83,7 +83,8 @@
   const W = WJ.features.map(f => itm(f.geometry)), F = FJ.features.map(f => ({ g: itm(f.geometry), p: f.properties }));
   const SCH = itm(MJ.scheme);
   const OPW = (await getJSON('data/opw_flood.json')).features.map(f => ({ g: itm(f.geometry), p: { src: 'opw', level: f.properties.aep } }));
-  OPW.forEach(o => F.push(o));
+  OPW.forEach(o => { o.p.fut = 'now'; F.push(o); });
+  (await getJSON('data/opw_future.json').catch(() => ({ features: [] }))).features.forEach(f => F.push({ g: itm(f.geometry), p: f.properties }));
   const BUS = await AW.buses();
   const UT = await AW.utilities();
   const TT = AW.traffic; getJSON('exhibition/config.json').then(c => TT.setConfigKey(c.tomtomKey)).catch(() => { });
@@ -118,7 +119,7 @@
       if (L.water) W.forEach(g => fill(g, '#1f6fb5'));
       const fl = ks && ks.flood;
       if (L.opw) [1, 5, 10].forEach(a => { const o = OPW.find(x => x.p.level === a); if (o) fill(o.g, Q.C.opwBands[a], .95); });
-      if (fl) { const f = F.find(x => x.p.src === fl.src && x.p.level === fl.level); if (f) { fill(f.g, fl.src === 'sea' ? '#3fa9f5' : fl.src === 'lake' ? '#36c6d3' : Q.C.opw, .95); tx.strokeStyle = '#d8f1ff'; tx.lineWidth = 3; tx.beginPath(); path(f.g); tx.stroke(); } }
+      if (fl) { const f = F.find(x => x.p.src === fl.src && x.p.level === fl.level && (fl.src !== 'coast' || x.p.rp === fl.rp) && (fl.src !== 'opw' || (x.p.fut || 'now') === (fl.fut || 'now'))); if (f) { fill(f.g, fl.src === 'sea' ? '#3fa9f5' : fl.src === 'lake' ? '#36c6d3' : fl.src === 'coast' ? Q.C.coast : Q.C.opw, .95); tx.strokeStyle = '#d8f1ff'; tx.lineWidth = 3; tx.beginPath(); path(f.g); tx.stroke(); } }
       const trOn = L.traffic && TR && TR.ok && !(ks && ks.busFast);
       if (L.roads) { tx.globalAlpha = L.traffic ? .35 : 1; tx.strokeStyle = '#ffffff'; tx.lineCap = 'round'; tx.lineJoin = 'round'; RD.forEach(r => { const w = RW[r.c]; if (!w) return; tx.lineWidth = w * k; tx.beginPath(); path(r.g); tx.stroke(); }); tx.globalAlpha = 1; }
       if (trOn) {                                                        // TomTom tiles, each placed by three of its corners
@@ -407,7 +408,7 @@
   function showKiosk(live) {
     const k2 = S.kiosk;
     $('#kioskState').innerHTML = !k2 ? 'No message from the kiosk yet. Open <a href="kiosk.html" target="_blank">kiosk.html</a> in this browser.' :
-      `${live ? '<b>Live:</b> ' : 'Last: '}${k2.flood ? (k2.flood.src === 'opw' ? `OPW river flood map, ${k2.flood.level}% a year · ` : `${k2.flood.src === 'sea' ? 'sea' : 'Lough Gill'} at ${fmtN(k2.flood.level, 1)} m OD · `) : ''}${fmtN(k2.sel?.ids?.length || 0)} ${k2.sel?.tgt === 'a' ? 'census areas' : 'buildings'} lit`;
+      `${live ? '<b>Live:</b> ' : 'Last: '}${k2.flood ? (k2.flood.src === 'opw' ? `OPW river flood map${k2.flood.fut && k2.flood.fut !== 'now' ? ' (' + (k2.flood.fut === 'm' ? 'mid-range' : 'high-end') + ' future)' : ''}, ${k2.flood.level}% a year · ` : k2.flood.src === 'coast' ? `OPW sea +${k2.flood.level} m, 1 in ${k2.flood.rp} years · ` : `${k2.flood.src === 'sea' ? 'sea' : 'Lough Gill'} at ${fmtN(k2.flood.level, 1)} m OD · `) : ''}${fmtN(k2.sel?.ids?.length || 0)} ${k2.sel?.tgt === 'a' ? 'census areas' : 'buildings'} lit`;
   }
   function showTraffic() {
     const el = $('#ttState'); if (!el) return;

@@ -146,3 +146,6 @@ button, select, input { font: inherit; color: inherit }
 .k-busclock { margin-top: 4px; font: 500 12.5px "IBM Plex Mono", monospace; color: #cfe3e6 }
 .k-ttkey { margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.12); display: flex; flex-direction: column; gap: 8px }
 .k-ttkey input { flex: 1; min-width: 0 }
+.k-coast .k-levelhead output { color: #8fa2ff; font-size: 28px }
+.k-coast .k-level input[type=range] { accent-color: #4f6dff }
+#rpSeg, #futSeg { margin-top: 10px }

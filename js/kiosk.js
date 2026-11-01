@@ -12,11 +12,15 @@
   boot('Loading buildings, census areas and water…');
   const [BJ, AJ, ZJ, RJ, CJ, WJ, FJ, MJ] = await Promise.all(['buildings', 'areas', 'zoning', 'roads', 'context', 'water', 'flood', 'model'].map(n => getJSON(`data/${n}.json`)));
   const OPW = await getJSON('data/opw_flood.json');
-  OPW.features.forEach(f => FJ.features.push({ type: 'Feature', properties: { src: 'opw', level: f.properties.aep, ha: f.properties.ha }, geometry: f.geometry }));
-  const OPWNAME = { 10: '1 in 10 years', 5: '1 in 20 years', 1: '1 in 100 years' };
+  OPW.features.forEach(f => FJ.features.push({ type: 'Feature', properties: { src: 'opw', level: f.properties.aep, fut: 'now', ha: f.properties.ha }, geometry: f.geometry }));
+  // OPW future maps: the sea about 2100 (+0.5 to +2.0 m) at 1 in 2, 20 and 100 years; the river's mid-range and high-end futures
+  (await getJSON('data/opw_future.json').catch(() => ({ features: [] }))).features.forEach(f => FJ.features.push(f));
+  const OPWNAME = { 10: '1 in 10 years', 5: '1 in 20 years', 1: '1 in 100 years', 0.1: '1 in 1,000 years' };
+  const FUTNAME = { now: 'today', m: 'mid-range future', h: 'high-end future' };
+  const RISENAME = { 0.5: 'mid-range future', 1: 'high-end future', 1.5: 'high+ future', 2: 'high++ future' };
   const D = { B: BJ.features, A: AJ.features, SA: {} };
   D.A.forEach((a, i) => { D.SA[a.properties.sa_pub2022] = a.properties; });
-  const LEVELS = { opw: [10, 5, 1], sea: [...new Set(FJ.features.filter(f => f.properties.src === 'sea').map(f => f.properties.level))].sort((a, b) => a - b),
+  const LEVELS = { opw: [10, 5, 1], opwF: [10, 1, 0.1], coast: [0.5, 1, 1.5, 2], sea: [...new Set(FJ.features.filter(f => f.properties.src === 'sea').map(f => f.properties.level))].sort((a, b) => a - b),
                    lake: [...new Set(FJ.features.filter(f => f.properties.src === 'lake').map(f => f.properties.level))].sort((a, b) => a - b) };
 
   // ---------------------------------------------------------------- state (what the projector shows)
@@ -33,7 +37,7 @@
     { id: 'buses', n: 'Town buses', s: 'S1, S2 and S3, from the timetable', col: '#ff4f7b', on: false },
     { id: 'traffic', n: 'Traffic', s: 'Main roads, typical for the time of day', col: '#e53935', on: false }
   ];
-  const DEF = () => ({ tab: 'water', src: 'sea', level: 3.0, flood: true, preset: -1, query: null, layers: Object.fromEntries(LAYERS.map(l => [l.id, l.on])), areaKey: 'pct_ber_e_to_g', busFast: false });
+  const DEF = () => ({ tab: 'water', src: 'sea', level: 3.0, flood: true, preset: -1, query: null, layers: Object.fromEntries(LAYERS.map(l => [l.id, l.on])), areaKey: 'pct_ber_e_to_g', busFast: false, rp: 100, fut: 'now' });
   let K = DEF(), touched = false, lastTouch = Date.now();
   let litB = new Set(), litA = new Set(), ready = false;
   const P = bus(m => { if (ready) onMsg(m); });
@@ -173,9 +177,15 @@
   }
   function showFlood() {
     const on = K.flood, f = ['all', ['==', ['get', 'src'], K.src], ['==', ['get', 'level'], K.level]];
+    if (K.src === 'coast') f.push(['==', ['get', 'rp'], K.rp]);
+    if (K.src === 'opw') f.push(['==', ['coalesce', ['get', 'fut'], 'now'], K.fut]);
     map.setFilter('flood', on ? f : ['==', 'level', -1]); map.setFilter('flood-line', on ? f : ['==', 'level', -1]);
-    map.setPaintProperty('flood', 'fill-color', K.src === 'sea' ? C.sea : K.src === 'lake' ? C.lake : C.opw);
+    map.setPaintProperty('flood', 'fill-color', srcCol());
   }
+  const srcCol = () => K.src === 'sea' ? C.sea : K.src === 'lake' ? C.lake : K.src === 'coast' ? C.coast : C.opw;
+  const levels = () => K.src === 'opw' && K.fut !== 'now' ? LEVELS.opwF : LEVELS[K.src];
+  const isMine = p => p.src === K.src && p.level === K.level && (K.src !== 'coast' || p.rp === K.rp) && (K.src !== 'opw' || (p.fut || 'now') === K.fut);
+  const floodName = () => K.src === 'opw' ? `OPW river flood map, ${FUTNAME[K.fut]}: ${OPWNAME[K.level]}` : K.src === 'coast' ? `OPW sea, ${RISENAME[K.level]} (+${fmtN(K.level, 1)} m): a 1-in-${K.rp}-year flood` : `${K.src === 'sea' ? 'Sea' : 'Lough Gill'} at ${fmtN(K.level, 1)} m OD`;
   function showLayers() {
     const vis = (id, on) => map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
     vis('roads', K.layers.roads); vis('water', K.layers.water); vis('zoning', K.layers.zoning); vis('mon', K.layers.mon);
@@ -187,9 +197,9 @@
   }
   function legend() {
     const L = [];
-    if (K.flood) L.push(K.src === 'opw' ? [C.opw, `OPW river flood map: ${OPWNAME[K.level]}`] : [K.src === 'sea' ? C.sea : C.lake, `${K.src === 'sea' ? 'Sea' : 'Lough Gill'} at ${fmtN(K.level, 1)} m OD`]);
+    if (K.flood) L.push([srcCol(), floodName()]);
     if (K.layers.opw) [10, 5, 1].forEach(a => L.push([C.opwBands[a], 'OPW flood map, ' + OPWNAME[a]]));
-    if (litB.size) L.push([C.match, K.flood && !K.query ? (K.src === 'opw' ? 'Buildings in the flood zone' : 'Buildings the water reaches') : 'Answer to your question']);
+    if (litB.size) L.push([C.match, K.flood && !K.query ? (K.src === 'opw' || K.src === 'coast' ? 'Buildings in the flood zone' : 'Buildings the water reaches') : 'Answer to your question']);
     if (litA.size) L.push([C.match, 'Census areas that match']);
     if (K.layers.areas) areaColours(D.A, K.areaKey).legend.forEach(x => L.push(x));
     if (K.layers.scheme) L.push([C.scheme, 'Proposed Garavogue crossing']);
@@ -203,38 +213,44 @@
 
   // ---------------------------------------------------------------- 01 water arrives
   function waterReached() {
-    if (K.src === 'opw') return run(D, { target: 'b', conditions: [{ field: 'op', op: '>=', value: K.level }] });
+    if (K.src === 'opw') return run(D, { target: 'b', conditions: [{ field: { now: 'op', m: 'om', h: 'oh' }[K.fut], op: '>=', value: K.level }] });
+    if (K.src === 'coast') return run(D, { target: 'b', conditions: [{ field: 'cf' + K.rp, op: '<=', value: K.level }] });
     const key = K.src === 'sea' ? 'fs' : 'fl';
     return run(D, { target: 'b', conditions: [{ field: key, op: '<=', value: K.level }] });
   }
   function setLevelUI() {
-    const lv = LEVELS[K.src], i = Math.max(0, lv.indexOf(K.level));
+    const lv = levels(); if (!lv.includes(K.level)) K.level = lv[0]; const i = Math.max(0, lv.indexOf(K.level)), O = K.src === 'opw', CO = K.src === 'coast';
     $('#lv').max = lv.length - 1; $('#lv').value = i;
-    $('#lvTicks').innerHTML = lv.map(v => `<span>${K.src === 'opw' ? OPWNAME[v] : fmtN(v, 1)}</span>`).join('');
-    $('#lvOut').textContent = K.src === 'opw' ? OPWNAME[K.level] : fmtN(K.level, 1) + ' m OD';
-    $('#pWater .k-levelhead span').textContent = K.src === 'opw' ? 'A flood this likely' : 'Water level';
-    $('#srcOpw').setAttribute('aria-pressed', K.src === 'opw'); $('#pWater').classList.toggle('k-opw', K.src === 'opw');
-    $('#srcSea').setAttribute('aria-pressed', K.src === 'sea'); $('#srcLake').setAttribute('aria-pressed', K.src === 'lake');
-    $('#pWater').classList.toggle('k-lake', K.src === 'lake');
+    $('#lvTicks').innerHTML = lv.map(v => `<span>${O ? OPWNAME[v] : CO ? '+' + fmtN(v, 1) + ' m' : fmtN(v, 1)}</span>`).join('');
+    $('#lvOut').textContent = O ? OPWNAME[K.level] : CO ? `+${fmtN(K.level, 1)} m` : fmtN(K.level, 1) + ' m OD';
+    $('#pWater .k-levelhead span').textContent = O ? 'A flood this likely' : CO ? 'Sea-level rise by about 2100' : 'Water level';
+    [['#srcSea', 'sea'], ['#srcLake', 'lake'], ['#srcOpw', 'opw'], ['#srcCoast', 'coast']].forEach(([id, v]) => $(id).setAttribute('aria-pressed', K.src === v));
+    $('#pWater').classList.toggle('k-opw', O); $('#pWater').classList.toggle('k-lake', K.src === 'lake'); $('#pWater').classList.toggle('k-coast', CO);
+    $('#rpSeg').hidden = !CO; $('#futSeg').hidden = !O;
+    $('#rpSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.v === K.rp));
+    $('#futSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === K.fut));
   }
   function water(on = true) {
     K.flood = on; K.query = null; K.preset = -1;
     setLevelUI(); showFlood();
-    const r = waterReached(), s = summary(D, r), f = FJ.features.find(x => x.properties.src === K.src && x.properties.level === K.level);
+    const r = waterReached(), s = summary(D, r), f = FJ.features.find(x => isMine(x.properties));
     setLit('b', on ? r.ids : []);
-    const today = K.src === 'opw' ? 'OPW flood maps for the Garavogue (floodinfo.ie): the land with a 10%, 5% or 1% chance of river flooding in any one year. They model the river, not the sea; coastal flooding is mapped separately.' : K.src === 'sea' ? 'Sligo harbour is usually between about −1 and +2 m OD; the highest tides and surges have reached about 3 m.' : 'Lough Gill usually sits at about 3.8 m OD (lidar, 2011).';
+    const today = K.src === 'coast' ? `The OPW's national coastal flood maps (2021) for about 2100, with the sea ${fmtN(K.level, 1)} m higher than today (its ${RISENAME[K.level]}), showing a storm tide with a 1-in-${K.rp} chance each year.${K.rp === 2 ? ' 1 in 2 years means an ordinary winter\'s high tide.' : ''}` : K.src === 'opw' ? (K.fut === 'now' ? 'OPW flood maps for the Garavogue (floodinfo.ie): the land with a 10%, 5% or 1% chance of river flooding in any one year. They model the river, not the sea.' : `OPW river flood maps for the ${FUTNAME[K.fut]} (${K.fut === 'm' ? 'about 20%' : 'about 30%'} more water in the river), at 1 in 10, 100 or 1,000 years.`) : K.src === 'sea' ? 'Sligo harbour is usually between about −1 and +2 m OD; the highest tides and surges have reached about 3 m.' : 'Lough Gill usually sits at about 3.8 m OD (lidar, 2011).';
     $('#wStats').innerHTML = on ? `
-      <div class="k-stat hot"><b>${fmtN(s.count)}</b><span>buildings ${K.src === 'opw' ? 'in the flood zone' : 'reached'}</span></div>
+      <div class="k-stat hot"><b>${fmtN(s.count)}</b><span>buildings ${K.src === 'opw' || K.src === 'coast' ? 'in the flood zone' : 'reached'}</span></div>
       <div class="k-stat"><b>${fmtN(s.homes)}</b><span>homes in them</span></div>
-      <div class="k-stat"><b>${fmtN(f?.properties.ha)} ha</b><span>${K.src === 'opw' ? 'in the flood zone inside the circle, including the river' : 'under water inside the circle, including the river and bay'}</span></div>
+      <div class="k-stat"><b>${fmtN(f?.properties.ha)} ha</b><span>${K.src === 'opw' || K.src === 'coast' ? 'in the flood zone inside the circle, including the river and bay' : 'under water inside the circle, including the river and bay'}</span></div>
       <div class="k-stat"><b>${fmtN(s.commercial)}</b><span>commercial units</span></div>` : '';
-    $('#wNote').textContent = on ? today + (K.src === 'opw' ? ' Indicative only; see floodinfo.ie for the official maps and their conditions of use.' : ' This spreads water over the ground: it ignores tides, defences and drainage, so treat it as an illustration, not a flood map.') : '';
+    $('#wNote').textContent = on ? today + (K.src === 'opw' || K.src === 'coast' ? ' Indicative only; see floodinfo.ie for the official maps and their conditions of use.' : ' This spreads water over the ground: it ignores tides, defences and drainage, so treat it as an illustration, not a flood map.') : '';
     showLayers(); sendState();
   }
   $('#srcSea').onclick = () => { touch(); K.src = 'sea'; K.level = 3.0; water(); };
   $('#srcLake').onclick = () => { touch(); K.src = 'lake'; K.level = 6.0; water(); };
-  $('#srcOpw').onclick = () => { touch(); K.src = 'opw'; K.level = 10; water(); };
-  $('#lv').oninput = e => { touch(); K.level = LEVELS[K.src][+e.target.value]; water(); };
+  $('#srcOpw').onclick = () => { touch(); K.src = 'opw'; K.fut = 'now'; K.level = 10; water(); };
+  $('#srcCoast').onclick = () => { touch(); K.src = 'coast'; K.level = 1; K.rp = 100; water(); };
+  $('#rpSeg').querySelectorAll('button').forEach(b => b.onclick = () => { touch(); K.rp = +b.dataset.v; water(); });
+  $('#futSeg').querySelectorAll('button').forEach(b => b.onclick = () => { touch(); K.fut = b.dataset.v; K.level = 10; water(); });
+  $('#lv').oninput = e => { touch(); K.level = levels()[+e.target.value]; water(); };
   $('#wOff').onclick = () => { touch(); water(false); };
 
   // ---------------------------------------------------------------- 02 ask the town
@@ -254,7 +270,7 @@
     const p = PRESETS[i]; K.preset = i;
     const r = run(D, p.q);
     K.query = { tgt: r.tgt, label: p.n };
-    if (p.flood) { K.src = p.flood.src; K.level = p.flood.level; K.flood = true; setLevelUI(); } else K.flood = false;
+    if (p.flood) { K.src = p.flood.src; K.level = p.flood.level; K.rp = p.flood.rp || 100; K.fut = p.flood.fut || 'now'; K.flood = true; setLevelUI(); } else K.flood = false;
     showFlood(); setLit(r.tgt, r.ids); showResult(r, p.n);
     document.querySelectorAll('.k-preset').forEach(b => b.setAttribute('aria-pressed', +b.dataset.i === i));
     showLayers(); sendState();
@@ -345,7 +361,7 @@
   // ---------------------------------------------------------------- the projector
   function sendState() {
     touched = true;
-    P.send({ t: 'kiosk', s: { flood: K.flood ? { src: K.src, level: K.level } : null, sel: { tgt: litA.size ? 'a' : 'b', ids: litA.size ? [...litA] : [...litB] }, layers: K.layers, areaKey: K.areaKey, busFast: K.busFast } });
+    P.send({ t: 'kiosk', s: { flood: K.flood ? { src: K.src, level: K.level, rp: K.rp, fut: K.fut } : null, sel: { tgt: litA.size ? 'a' : 'b', ids: litA.size ? [...litA] : [...litB] }, layers: K.layers, areaKey: K.areaKey, busFast: K.busFast } });
   }
   function onMsg(m) {
     if (m.t === 'hello' && m.who === 'out') { outs.add(m.i || 0); link(); sendState(); }
