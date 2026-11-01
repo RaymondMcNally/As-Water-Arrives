@@ -22,7 +22,7 @@ The kiosk, the projection page and the projector windows must be open in the **s
 `data/buildings.json` and `data/model/buildings.json` contain building footprints derived from **Tailte Éireann (OSi)** data. Check that your licence allows publishing them on a public website. If it doesn't, keep the repository private and serve the site locally at the exhibition, or switch the footprints to OpenStreetMap buildings.
 
 ## Traffic
-The **Traffic** layer shows **typical traffic** on the main roads for the time of day, on the same clock as the buses (`js/typical.js`). It is a model, not measured traffic, and needs no account. If a TomTom API key is ever added (kiosk staff panel or Projection page; kept in that browser only), the layer switches to live TomTom flow tiles.
+The **Traffic** layer is **live TomTom flow** (style `relative`, zoom 15, refreshed every 5 minutes) when a TomTom API key has been entered in the kiosk staff panel or on the Projection page. The key is kept in that browser's localStorage only, never in the repository. Without a key, or if TomTom fails, it shows **typical traffic** on the main roads for the time of day (`js/typical.js`). **A day in 3 minutes** replays a day recorded from TomTom with `record.html` (kept in the browser, `aiarg-traffic-rec`), or typical traffic if nothing has been recorded.
 
 ## Sea-level rise
 `tools/make_opw_future.py` clips the OPW's national coastal flood maps (2021: present day, and future scenarios +0.5 to +2.0 m for about 2100) and the river's mid-range and high-end future extents to the circle (`data/opw_future.json`) and gives each building the smallest rise that reaches it (`cf2`, `cf20`, `cf100`) and its future river band (`om`, `oh`). The kiosk's **Sea-level rise** choice steps through them.
