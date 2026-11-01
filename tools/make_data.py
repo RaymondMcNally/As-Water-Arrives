@@ -64,7 +64,7 @@ gb["features"] = keep
 dump(gb, f"{D}/buildings.json")
 
 # ---------------------------------------------------------------- 2. God's Eye context layers, copied as published
-for k in ("areas", "zoning", "roads", "context", "meta"):
+for k in ("areas", "zoning", "context", "meta"):            # roads come from the OSM file the tiles were cut from (below)
     src = json.load(open(f"{GE}/d-{k}.json")); dump(src, f"{D}/{k}.json")
 
 # ---------------------------------------------------------------- 3. water today and the two rising-water scenarios
@@ -141,6 +141,14 @@ RD = RD[RD.fclass.isin(widths)]
 RD = RD[RD.intersects(area_box)]
 road = unary_union([g.buffer(widths[c] / 2, cap_style=2, join_style=1, quad_segs=4) for g, c in zip(RD.geometry, RD.fclass)]).simplify(0.15).intersection(area_box)
 dump({"polygons": rings(L0(road))}, f"{D}/model/roads.json")
+# the road centrelines for the kiosk, the projector and the traffic layer: the same OSM roads and classes as the tiles,
+# within 300 m of the circle, so nothing stops short of the model's edge
+RL = RD[RD.intersects(circle.buffer(300))].copy(); RL["geometry"] = RL.geometry.intersection(circle.buffer(300))
+RL = RL[~RL.geometry.is_empty].explode(index_parts=False)
+RL = RL[RL.geometry.geom_type == "LineString"].to_crs(4326)
+r6 = lambda c: [round(c[0], 6), round(c[1], 6)]
+dump({"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {"fclass": f, "name": n if isinstance(n, str) and n else None, "ref": rf if isinstance(rf, str) and rf else None},
+      "geometry": {"type": "LineString", "coordinates": [r6(c) for c in g.coords]}} for g, f, n, rf in zip(RL.geometry, RL.fclass, RL["name"], RL["ref"])]}, f"{D}/roads.json")
 Wc = W[W.intersects(area_box)]
 dump({"items": [[round(float(lv), 2), rings(L0(g.intersection(area_box).simplify(0.2)))] for g, lv in zip(Wc.geometry, Wc.level_m)]}, f"{D}/model/water.json")
 pf = prop[prop.part == "road footprint"].geometry.iloc[0]; bd = prop[prop.part == "bridge deck"].geometry.iloc[0]

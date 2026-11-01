@@ -21,8 +21,9 @@
       const res = await TT.load(BOX, TT.Z);
       if (!res.ok) { msg(`${hhmm(t)}: no snapshot, ${TT.why[res.why]}${res.status ? ' (HTTP ' + res.status + ')' : ''}. Try Test key on the Projection page.`); return; }
       const lv = RC.sample(SEG, res.tiles), r = RC.read();
-      if (r.nseg && r.nseg !== SEG.length) { msg('The road list has changed since the earlier recordings; starting a new set.'); r.days = {}; }
-      r.nseg = SEG.length; r.days[date] = r.days[date] || { wd: d.getDay(), steps: {} }; r.days[date].steps[t] = lv;
+      // each day remembers how many roads it was read for; a day made with an older road list is kept but not replayed
+      r.nseg = SEG.length; if (r.days[date] && (r.days[date].n || SEG.length) !== SEG.length) delete r.days[date];
+      r.days[date] = r.days[date] || { wd: d.getDay(), n: SEG.length, steps: {} }; r.days[date].steps[t] = lv;
       if (!RC.write(r)) { msg('This browser would not store any more. Export, then delete old days.'); return; }
       const cov = [...lv].filter(c => c !== '-').length, slow = [...lv].filter(c => c === '2' || c === '3').length;
       msg(`${hhmm(t)}${manual ? ' (manual)' : ''}: ${cov} of ${SEG.length} main roads read, ${slow} slow or queuing.`);
@@ -48,7 +49,8 @@
     $('#days').innerHTML = '<tr><th>Day</th><th>Snapshots</th><th>Midnight → midnight</th><th></th></tr>' + Object.keys(r.days).sort().reverse().map(k => {
       const D = r.days[k], cells = [];
       for (let q = 0; q < 96; q++) { const l = D.steps[q * RC.STEP]; if (l === undefined) { cells.push('<i></i>'); continue; } const c = [...l].filter(x => x !== '-'), s = c.length ? c.filter(x => x >= '2').length / c.length : 0; cells.push(`<i style="background:rgb(${Math.round(60 + 195 * Math.min(1, s * 4))},${Math.round(180 - 150 * Math.min(1, s * 4))},70)" title="${hhmm(q * RC.STEP)}"></i>`); }
-      return `<tr><td>${WD[D.wd]} ${k}</td><td>${Object.keys(D.steps).length}</td><td><div class="strip">${cells.join('')}</div></td><td>${best && best.date === k ? '<b>used for the replay</b>' : ''}</td></tr>`;
+      const old = (D.n || r.nseg) !== SEG.length;
+      return `<tr${old ? ' style="opacity:.5"' : ''}><td>${WD[D.wd]} ${k}${old ? ' (older road list, not replayed)' : ''}</td><td>${Object.keys(D.steps).length}</td><td><div class="strip">${cells.join('')}</div></td><td>${best && best.date === k ? '<b>used for the replay</b>' : ''}</td></tr>`;
     }).join('');
   }
   $('#go').onclick = () => { on = !on; try { localStorage.setItem(ON, on ? '1' : '0'); } catch (e) { } if (on) { wake(); tick(); } else if (lock) { lock.release(); } draw(); };
@@ -56,8 +58,7 @@
   $('#exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(RC.read())], { type: 'application/json' })); a.download = `sligo-traffic-${ymd(new Date())}.json`; a.click(); };
   $('#imp').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
-    try { const inc = JSON.parse(await f.text()), r = RC.read(); if (r.nseg && inc.nseg && r.nseg !== inc.nseg) throw new Error('made with a different road list');
-      r.nseg = inc.nseg || r.nseg; Object.entries(inc.days || {}).forEach(([k, D]) => { r.days[k] = r.days[k] ? { wd: D.wd, steps: Object.assign({}, r.days[k].steps, D.steps) } : D; }); RC.write(r); RC._c = null; msg('Imported.'); }
+    try { const inc = JSON.parse(await f.text()), r = RC.read();       Object.entries(inc.days || {}).forEach(([k, D]) => { D.n = D.n || inc.nseg; r.days[k] = r.days[k] ? { wd: D.wd, steps: Object.assign({}, r.days[k].steps, D.steps) } : D; }); RC.write(r); RC._c = null; msg('Imported.'); }
     catch (err) { msg('Could not import: ' + err.message); }
     draw();
   };

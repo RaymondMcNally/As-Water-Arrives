@@ -27,7 +27,7 @@
     bestDay() {
       if (R._c !== null && Date.now() - R._at < 60000) return R._c;
       const r = R.read(); let best = null;
-      Object.keys(r.days).sort().reverse().some(d => { const D = r.days[d]; if (D.wd >= 1 && D.wd <= 5 && Object.keys(D.steps).length >= MIN_STEPS) { best = { date: d, n: r.nseg, steps: Object.entries(D.steps).map(([t, l]) => [+t, l]).sort((a, b) => a[0] - b[0]) }; return true; } return false; });
+      Object.keys(r.days).sort().reverse().some(d => { const D = r.days[d]; if (D.wd >= 1 && D.wd <= 5 && Object.keys(D.steps).length >= MIN_STEPS && (D.n || r.nseg) === r.nseg) { best = { date: d, n: D.n || r.nseg, steps: Object.entries(D.steps).map(([t, l]) => [+t, l]).sort((a, b) => a[0] - b[0]) }; return true; } return false; });
       R._c = best; R._at = Date.now(); return best;
     },
     // levels (-1 to 3) for every road at clock time t, from the snapshot at or before t
