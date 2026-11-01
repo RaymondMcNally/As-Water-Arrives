@@ -48,6 +48,7 @@
   const UT = await AW.utilities();
   Object.values(UT).forEach(u => LAYERS.push({ id: u.id, n: u.name, s: u.sub, col: u.col, on: false }));
   const PL = await AW.planning(); if (PL) LAYERS.push({ id: 'planning', n: 'Planning permissions', s: 'Granted since 2017, year by year', col: AW.PLAN.homes[0], on: false });
+  const NA = await AW.nature(); if (NA) LAYERS.push({ id: 'nature', n: 'Protected nature sites', s: 'SAC, SPA and pNHA (NPWS)', col: AW.NATURE.sac[0], on: false });
   const CY = await AW.cycling(); if (CY) LAYERS.push({ id: 'cycle', n: 'Cycle routes', s: 'Tracks, shared paths and lanes', col: AW.CYCLE.track[0], on: false });
   const TT = AW.traffic; TT.setConfigKey(cfg.tomtomKey); let ttB = -1, ttErr = '', ttRetry = 0;
   const TY = AW.typicalTraffic, RC = AW.trafficRec; let tyStep = null;
@@ -182,6 +183,14 @@
     if (!on) return; if (K.planY >= PL.last) K.planY = PL.first - 1;
     planTimer = setInterval(() => { touch(); K.planY++; if (K.planY >= PL.last) { K.planY = PL.last; planPlay(false); } $('#planY').value = K.planY; planShow(); legend(); sendState(); }, 1300);
   }
+  if (NA) {                                                          // protected sites: SAC filled, SPA dashed outline, pNHA dotted outline
+    const feats = []; NA.sites.forEach((st, i) => st.rings.forEach(poly => feats.push({ type: 'Feature', properties: { i, k: st.k }, geometry: { type: 'Polygon', coordinates: poly.map(r => r.map(([e, n]) => fromITM(e, n))) } })));
+    map.addSource('nature', { type: 'geojson', data: { type: 'FeatureCollection', features: feats } });
+    map.addLayer({ id: 'nature-sac', type: 'fill', source: 'nature', filter: ['==', 'k', 'sac'], layout: { visibility: 'none' }, paint: { 'fill-color': AW.NATURE.sac[0], 'fill-opacity': .4 } }, 'b');
+    map.addLayer({ id: 'nature-sac-l', type: 'line', source: 'nature', filter: ['==', 'k', 'sac'], layout: { visibility: 'none' }, paint: { 'line-color': AW.NATURE.sac[0], 'line-width': 1.5 } });
+    map.addLayer({ id: 'nature-spa', type: 'line', source: 'nature', filter: ['==', 'k', 'spa'], layout: { visibility: 'none' }, paint: { 'line-color': AW.NATURE.spa[0], 'line-width': 2.2, 'line-dasharray': [3, 2] } });
+    map.addLayer({ id: 'nature-nha', type: 'line', source: 'nature', filter: ['in', 'k', 'nha', 'pnha'], layout: { visibility: 'none' }, paint: { 'line-color': AW.NATURE.pnha[0], 'line-width': 1.4, 'line-dasharray': [1, 2] } });
+  }
   const DASH = [[0, 4, 3], [0.5, 4, 2.5], [1, 4, 2], [1.5, 4, 1.5], [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0], [0, 0.5, 3, 3.5], [0, 1, 3, 3], [0, 1.5, 3, 2.5], [0, 2, 3, 2], [0, 2.5, 3, 1.5], [0, 3, 3, 1], [0, 3.5, 3, 0.5]];
   let dashI = 0;
   setInterval(() => { dashI = (dashI + 1) % DASH.length; Object.values(UT).forEach(u => { if (K.layers[u.id]) map.setPaintProperty(u.id + '-flow', 'line-dasharray', DASH[dashI]); }); }, 90);
@@ -227,7 +236,7 @@
     const vis = (id, on) => map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
     vis('roads', K.layers.roads); vis('water', K.layers.water); vis('zoning', K.layers.zoning); vis('mon', K.layers.mon);
     vis('scheme', K.layers.scheme); vis('opw', K.layers.opw); vis('tiles', K.layers.grid); vis('hs', true); map.setPaintProperty('hs', 'raster-opacity', K.layers.relief ? .8 : .45);
-    vis('area-fill', K.layers.areas); trafficTick(); Object.values(UT).forEach(u => { vis(u.id, K.layers[u.id]); vis(u.id + '-flow', K.layers[u.id]); if (map.getLayer(u.id + '-out')) vis(u.id + '-out', K.layers[u.id]); if (map.getLayer(u.id + '-plant')) vis(u.id + '-plant', K.layers[u.id]); }); if (CY) { vis('cycle', K.layers.cycle); vis('cycle-park', K.layers.cycle); } planShow(); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses && !K.layers.traffic; busTick();
+    vis('area-fill', K.layers.areas); trafficTick(); Object.values(UT).forEach(u => { vis(u.id, K.layers[u.id]); vis(u.id + '-flow', K.layers[u.id]); if (map.getLayer(u.id + '-out')) vis(u.id + '-out', K.layers[u.id]); if (map.getLayer(u.id + '-plant')) vis(u.id + '-plant', K.layers[u.id]); }); if (CY) { vis('cycle', K.layers.cycle); vis('cycle-park', K.layers.cycle); } planShow(); if (NA) ['nature-sac', 'nature-sac-l', 'nature-spa', 'nature-nha'].forEach(id => vis(id, K.layers.nature)); vis('bus', K.layers.buses); vis('bus-lines', K.layers.buses); $('#busCtl').hidden = !K.layers.buses && !K.layers.traffic; busTick();
     if (K.layers.areas) { const cm = areaColours(D.A, K.areaKey), pairs = []; D.A.forEach(a => { const c = cm.get(a.properties[K.areaKey]); if (c) pairs.push(a.properties.sa_pub2022, c); });
       map.setPaintProperty('area-fill', 'fill-color', pairs.length ? ['match', ['get', 'sa_pub2022'], ...pairs, 'rgba(0,0,0,0)'] : 'rgba(0,0,0,0)'); }
     legend();
@@ -243,6 +252,7 @@
     if (K.layers.traffic) { (live() && !K.busFast ? TT.legend : TY.legend).forEach(x => L.push(x)); if (TT.key() && ttErr) L.push(['#555', 'Live TomTom data did not load (see staff panel)']); }
     Object.values(UT).forEach(u => { if (K.layers[u.id]) { L.push([u.col, u.id === 'sewer' ? 'Sewer pipes (dashes flow downstream)' : u.name]); if (u.points.outfall.length) L.push([u.col, 'Sewer outfalls']); u.plants.forEach(p => L.push([u.col, `● ${p.name}${p.pe ? ` (built for ${fmtN(p.pe)} people)` : ''}, just outside the model`])); } });
     if (K.layers.cycle && CY) { Object.entries(AW.CYCLE).forEach(([k, [c, n]]) => { if (CY.km[k]) L.push([c, `${n}: ${fmtN(CY.km[k], 1)} km`]); }); L.push(['#ffffff', `Bike parking: ${CY.parking.length} places`]); }
+    if (K.layers.nature && NA) NA.sites.forEach(st => L.push([AW.NATURE[st.k][0], `${AW.NATURE[st.k][1]}: ${st.name}, ${fmtN(st.hain)} ha in the circle`]));
     if (K.layers.planning && PL) Object.entries(AW.PLAN).forEach(([k, [c, n]]) => L.push([c, n]));
     if (K.layers.buses) BUS.routes.forEach(r => L.push([r.col, `Bus ${r.id}: ${r.name.replace(/ - /g, ' – ')}`]));
     $('#legend').innerHTML = L.map(([c, t]) => `<div><i style="background:${c}"></i>${esc(t)}</div>`).join('') + (K.layers.buses ? '<div class="k-busclock" id="busClock"></div>' : '') + (K.layers.traffic ? (live() && !K.busFast ? '<div class="k-busclock">Traffic © TomTom, live, updated every 5 minutes</div>' : '<div class="k-busclock" id="typClock"></div>') : '');
@@ -396,8 +406,15 @@
     $('#insp').innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>Planning ${esc(a.app)}</h3>
       <span class="k-dim"><i style="display:inline-block;width:10px;height:10px;background:${c};border-radius:2px"></i> ${esc(n)} · ${esc(a.type)} · decided ${a.y}${a.h ? ' · ' + fmtN(a.h) + ' home' + (a.h === 1 ? '' : 's') : ''}</span>
       <p class="k-small" style="margin:8px 0">${esc(a.d)}${a.d.length >= 220 ? '…' : ''}</p>
+      ${a.pz != null && a.pz <= 50 ? `<p class="k-small" style="color:#8fe6b0">${a.pz === 0 ? 'Inside' : 'Within ' + a.pz + ' m of'} a European protected site (SAC or SPA).</p>` : ''}
       ${a.fz ? '<p class="k-small" style="color:#9ec9ff">Inside today\'s OPW 1-in-100-year flood zone.</p>' : a.fz1 ? '<p class="k-small" style="color:#9ec9ff">Inside the OPW 1-in-100-year sea flood zone with the sea 1 m higher (about 2100).</p>' : ''}
       <p class="k-small k-dim">Sligo County Council ePlanning record ${esc(a.app)}. Planning permission is not the same as a building started.</p>`;
+    $('#insp').hidden = false; $('#insp .x').onclick = () => { $('#insp').hidden = true; };
+  }
+  function inspectN(ids) {
+    $('#insp').innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>Protected nature site</h3>` + ids.map(i => { const st = NA.sites[i];
+      return `<p style="margin:8px 0 2px"><i style="display:inline-block;width:10px;height:10px;background:${AW.NATURE[st.k][0]};border-radius:2px"></i> <b>${esc(st.name)}</b></p><span class="k-small k-dim">${esc(NA.kinds[st.k])} · site ${esc(st.code)} · ${fmtN(st.ha)} ha in all, ${fmtN(st.hain)} ha inside the model</span>`; }).join('') +
+      `<p class="k-small k-dim" style="margin-top:8px">Boundaries from the National Parks and Wildlife Service. Development near an SAC or SPA must be screened for Appropriate Assessment.</p>`;
     $('#insp').hidden = false; $('#insp .x').onclick = () => { $('#insp').hidden = true; };
   }
   function inspectA(i) {
@@ -409,6 +426,7 @@
   map.on('click', e => {
     touch();
     if (PL && K.layers.planning) { const q = map.queryRenderedFeatures(e.point, { layers: ['plan-fill', 'plan-pt'] })[0]; if (q) return inspectP(q.properties.i); }
+    if (NA && K.layers.nature) { const q = map.queryRenderedFeatures(e.point, { layers: ['nature-sac', 'nature-spa', 'nature-nha'] }); if (q.length) return inspectN([...new Set(q.map(x => x.properties.i))]); }
     const f = map.queryRenderedFeatures(e.point, { layers: ['b'] })[0]; if (f) return inspectB(f.id);
     const a = map.queryRenderedFeatures(e.point, { layers: ['area-fill', 'a-sel'] })[0]; if (a) return inspectA(a.id);
     $('#insp').hidden = true;

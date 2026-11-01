@@ -24,6 +24,13 @@
     J.shown = (y, only) => J.apps.filter(a => a.dec === 'granted' && (only ? Math.max(a.y, J.first) === y : a.y <= y));
     return J;
   };
+  // protected nature sites (data/protected.json)
+  AW.NATURE = { sac: ['#5fd38d', 'SAC'], spa: ['#ffa94d', 'SPA'], nha: ['#e8f59a', 'NHA'], pnha: ['#e8f59a', 'pNHA'] };
+  AW.nature = async function () {
+    const J = await AW.getJSON('data/protected.json').catch(() => null); if (!J) return null;
+    J.sites.forEach(s => { s.rings = s.r.map(poly => poly.map(c => { const xy = []; for (let i = 0; i < c.length; i += 2) xy.push([c[i], c[i + 1]]); return xy; })); });
+    return J;
+  };
   AW.utilities = async function () {
     const out = {};
     await Promise.all(Object.entries(NETS).map(async ([k, n]) => {

@@ -26,6 +26,9 @@ The **Traffic** layer shows **typical traffic** on the main roads for the time o
 ## Sea-level rise
 `tools/make_opw_future.py` clips the OPW's national coastal flood maps (2021: present day, and future scenarios +0.5 to +2.0 m for about 2100) and the river's mid-range and high-end future extents to the circle (`data/opw_future.json`) and gives each building the smallest rise that reaches it (`cf2`, `cf20`, `cf100`) and its future river band (`om`, `oh`). The kiosk's **Sea-level rise** choice steps through them.
 
+## Protected nature sites
+`tools/make_protected.py` clips the NPWS SAC, SPA, NHA and pNHA boundaries (cut to Sligo as GeoJSON) to the model (`data/protected.json`) and gives buildings and planning sites `pz`, the distance to the nearest SAC or SPA up to 200 m. The Garavogue is part of Lough Gill SAC, so much of the town centre is within 50 m of a European site.
+
 ## Planning permissions
 `tools/make_planning.py` takes the national planning applications service (site outlines and points) for the model's area, as saved from the browser, and writes `data/planning.json`: year decided, decision, a type and number of homes read from the description, and whether each site is in today's OPW 1-in-100-year flood zones or the +1 m sea zone. Names and addresses are not kept. The kiosk's **Planning permissions** layer has a year slider and a play button.
 
