@@ -5,5 +5,112 @@
   "tomtomKey": "",
   "story": true,
   "storyAfterSeconds": 40,
-  "storyStepSeconds": 9
+  "storyStepSeconds": 9,
+  "screenImages": {
+    "welcome": {
+      "file": "img/model-overview.jpg",
+      "caption": "The 52 tiles assembled, rendered from the print files",
+      "credit": ""
+    },
+    "coast": {
+      "file": "exhibition/screen/coast.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "sea": {
+      "file": "exhibition/screen/sea.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "lake": {
+      "file": "exhibition/screen/lake.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "opw": {
+      "file": "exhibition/screen/opw.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "ask": {
+      "file": "exhibition/screen/ask.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "niah": {
+      "file": "exhibition/screen/niah.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "power": {
+      "file": "exhibition/screen/power.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "nature": {
+      "file": "exhibition/screen/nature.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "planning": {
+      "file": "exhibition/screen/planning.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "cycle": {
+      "file": "exhibition/screen/cycle.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "buses": {
+      "file": "exhibition/screen/buses.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "traffic": {
+      "file": "exhibition/screen/traffic.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "sewer": {
+      "file": "exhibition/screen/sewer.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "watermains": {
+      "file": "exhibition/screen/watermains.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "areas": {
+      "file": "exhibition/screen/areas.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "zoning": {
+      "file": "exhibition/screen/zoning.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "mon": {
+      "file": "exhibition/screen/mon.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "scheme": {
+      "file": "exhibition/screen/scheme.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "relief": {
+      "file": "exhibition/screen/relief.jpg",
+      "caption": "",
+      "credit": ""
+    },
+    "grid": {
+      "file": "exhibition/screen/grid.jpg",
+      "caption": "",
+      "credit": ""
+    }
+  }
 }

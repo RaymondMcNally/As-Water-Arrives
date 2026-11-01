@@ -1,14 +1,15 @@
 # Exhibition set-up
 
-One computer, three displays: the touch monitor and two projectors (Epson EB-W06). One projector also works; see the end of this section.
+One computer, four displays: the touch monitor, two projectors (Epson EB-W06) and a large monitor for the story screen. One projector also works, and the story screen is optional.
 
 | Display | Window | Shows |
 |---|---|---|
 | Touch monitor beside the model | `kiosk.html` | the controls visitors use |
 | Projector 1, over the north half | `project.html?out` | water, answers and layers on the white tiles |
 | Projector 2, over the south half | `project.html?out=2` | the same, for the south half |
+| Large monitor beside the model | `screen.html` | the story screen: what the model shows, in words, numbers, a chart and a picture |
 
-All the windows must be open in the **same Chrome profile on the same computer**. The computer needs three display outputs (two projectors plus the touch monitor): the Dell Precision, or a Mac with three outputs. A standard M-series Mac mini drives only two.
+All the windows must be open in the **same Chrome profile on the same computer**. The computer needs a display output for each: four with the story screen (touch monitor, two projectors, large monitor), three without it. Use the Dell Precision (check its graphics card has four outputs; most workstation cards have four DisplayPorts), or a USB-C/DisplayLink adaptor for the large monitor, which only shows text and pictures. A standard M-series Mac mini drives only two.
 
 ## Hanging the projectors
 The model is 1.64 m across. Each EB-W06 at its widest zoom throws a picture 1/1.30 of its height above the table, at 16:10.
@@ -55,6 +56,15 @@ Recorded on another computer? **Export** there and **Import** on the exhibition 
 
 ## The story (attract loop)
 When nobody has touched the kiosk for `storyAfterSeconds` (40), it plays a short story on the kiosk and the model, one step every `storyStepSeconds` (9): today's 1-in-100-year storm tide, the sea 0.5, 1 and 2 m higher, heritage buildings in the water's way, substations in today's flood zone, the protected river, and planning since 2017, then an invitation to touch. The numbers in the captions come from the data. Any touch stops it and leaves the kiosk ready to use. Staff can start it from the staff panel (**Play the story now**); set `"story": false` in `config.json` to turn it off.
+
+## The story screen (large monitor)
+`screen.html` goes on a large monitor beside the model (a 55–75 inch TV is fine). It never takes touches: it follows the kiosk and explains what is on the model, readable from a few metres away.
+
+- **During the story** it shows the step's headline and caption with the step dots, the numbers behind it, and a chart (for the sea steps, how many buildings the 1-in-100-year storm reaches as the sea rises, with this step highlighted).
+- **When a visitor is using the kiosk** it shows *On the model now*: a plain-language headline for the water or layer they chose, what it means, the key numbers, a chart where one helps (buildings by water level; new homes permitted each year), the legend, and the water scenario underneath when a layer is shown over a flood.
+- **The picture**: a photograph for the topic if there is one in `exhibition/screen/` (see the README there for the file names and ideas, and `screenImages` in `config.json` for captions and credits); otherwise the kiosk's own 3D map of what is projected, refreshed after each change.
+
+Open it from the staff panel (**Open the story screen**), drag it to the monitor, click it and press F; or let the start script open it (`SCREEN=1` and `SCREEN_X`). The staff panel says whether it is connected. It must be in the same Chrome profile as the kiosk.
 
 ## Layers
 **03 On the model** groups the layers (water and drainage, getting around, town and growth, energy, heritage and nature, the model). **One layer at a time** (the default) keeps roads and water as a base and swaps the rest, so the projected model stays readable; **Combine layers** lets visitors stack them.

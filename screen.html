@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>As Water Arrives · story screen</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/screen.css">
+</head>
+<body>
+<!-- The large monitor beside the model. It follows the kiosk (same Chrome profile, same computer) and explains what the model shows. -->
+<main class="s" id="s">
+  <header class="s-top">
+    <span class="s-kicker" id="kicker">As Water Arrives</span>
+    <span class="s-steps" id="steps"></span>
+    <span class="s-clock" id="clock"></span>
+  </header>
+  <section class="s-words" id="words">
+    <h1 id="h">As Water Arrives</h1>
+    <p class="s-water" id="water" hidden></p>
+    <p class="s-text" id="text">Waiting for the kiosk…</p>
+    <div class="s-stats" id="stats"></div>
+  </section>
+  <aside class="s-side">
+    <figure class="s-pic" id="pic">
+      <img id="img" alt="">
+      <figcaption id="cap"></figcaption>
+    </figure>
+    <div class="s-chart" id="chart" hidden></div>
+  </aside>
+  <footer class="s-foot">
+    <div class="s-legend" id="legend"></div>
+    <div class="s-org">A-IARG 2027 · ATU Sligo · Sligo at 1:2500</div>
+  </footer>
+</main>
+<p class="s-help" id="help">Press F for full screen. This window follows the kiosk in this browser.</p>
+<script src="js/common.js"></script>
+<script src="js/screen.js"></script>
+</body>
+</html>

@@ -39,7 +39,8 @@
   ];
   const DEF = () => ({ tab: 'water', src: 'sea', level: 3.0, flood: true, preset: -1, query: null, layers: Object.fromEntries(LAYERS.map(l => [l.id, l.on])), areaKey: 'pct_ber_e_to_g', busFast: false, rp: 100, fut: 'now', planY: 2026, planOnly: false, solo: true });
   let K = DEF(), touched = false, lastTouch = Date.now();
-  let litB = new Set(), litA = new Set(), ready = false;
+  let litB = new Set(), litA = new Set(), ready = false, lastL = [], lastQ = null, lastLayer = null;
+  const screens = new Set();                                // story screens open (screen.html on the large monitor)
   const P = bus(m => { if (ready) onMsg(m); });
   const outs = new Set();                                   // projector windows open (0 = projector 1, 1 = projector 2)
   const nProj = () => { try { return (JSON.parse(localStorage.getItem('aiarg-projector-v2') || '{}').n) === 2 ? 2 : 1; } catch (e) { return 1; } };
@@ -295,17 +296,18 @@
     if (K.layers.nature && NA) NA.sites.forEach(st => L.push([AW.NATURE[st.k][0], `${AW.NATURE[st.k][1]}: ${st.name}, ${fmtN(st.hain)} ha in the circle`]));
     if (K.layers.planning && PL) Object.entries(AW.PLAN).forEach(([k, [c, n]]) => L.push([c, n]));
     if (K.layers.buses) BUS.routes.forEach(r => L.push([r.col, `Bus ${r.id}: ${r.name.replace(/ - /g, ' – ')}`]));
+    lastL = L;
     $('#legend').innerHTML = L.map(([c, t]) => `<div><i style="background:${c}"></i>${esc(t)}</div>`).join('') + (K.layers.buses ? '<div class="k-busclock" id="busClock"></div>' : '') + (K.layers.traffic ? (live() && !K.busFast ? '<div class="k-busclock">Traffic © TomTom, live, updated every 5 minutes</div>' : '<div class="k-busclock" id="typClock"></div>') : '');
     tyStep = null;
     busTick();
   }
 
   // ---------------------------------------------------------------- 01 water arrives
-  function waterReached() {
-    if (K.src === 'opw') return run(D, { target: 'b', conditions: [{ field: { now: 'op', m: 'om', h: 'oh' }[K.fut], op: '>=', value: K.level }] });
-    if (K.src === 'coast') return run(D, { target: 'b', conditions: [{ field: 'cf' + K.rp, op: '<=', value: K.level }] });
+  function waterReached(level = K.level) {
+    if (K.src === 'opw') return run(D, { target: 'b', conditions: [{ field: { now: 'op', m: 'om', h: 'oh' }[K.fut], op: '>=', value: level }] });
+    if (K.src === 'coast') return run(D, { target: 'b', conditions: [{ field: 'cf' + K.rp, op: '<=', value: level }] });
     const key = K.src === 'sea' ? 'fs' : 'fl';
-    return run(D, { target: 'b', conditions: [{ field: key, op: '<=', value: K.level }] });
+    return run(D, { target: 'b', conditions: [{ field: key, op: '<=', value: level }] });
   }
   function setLevelUI() {
     const lv = levels(); if (!lv.includes(K.level)) K.level = lv[0]; const i = Math.max(0, lv.indexOf(K.level)), O = K.src === 'opw', CO = K.src === 'coast';
@@ -319,12 +321,15 @@
     $('#rpSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.v === K.rp));
     $('#futSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === K.fut));
   }
+  function floodText() {
+    return K.src === 'coast' ? `The OPW's national coastal flood maps (2021)${K.level ? ` for about 2100, with the sea ${fmtN(K.level, 1)} m higher than today (its ${RISENAME[K.level]})` : ', with today\'s sea'}, showing a storm tide with a 1-in-${K.rp} chance each year.${K.rp === 2 ? ' 1 in 2 years is not an ordinary tide: it is a high tide with a storm surge, likely to happen about every other year.' : ''}` : K.src === 'opw' ? (K.fut === 'now' ? 'OPW flood maps for the Garavogue (floodinfo.ie): the land with a 10%, 5% or 1% chance of river flooding in any one year. They model the river, not the sea.' : `OPW river flood maps for the ${FUTNAME[K.fut]} (${K.fut === 'm' ? 'about 20%' : 'about 30%'} more water in the river), at 1 in 10, 100 or 1,000 years.`) : K.src === 'sea' ? 'Sligo harbour is usually between about −1 and +2 m OD; the highest tides and surges have reached about 3 m.' : 'Lough Gill usually sits at about 3.8 m OD (lidar, 2011).';
+  }
   function water(on = true) {
     K.flood = on; K.query = null; K.preset = -1;
     setLevelUI(); showFlood();
     const r = waterReached(), s = summary(D, r), f = FJ.features.find(x => isMine(x.properties));
     setLit('b', on ? r.ids : []);
-    const today = K.src === 'coast' ? `The OPW's national coastal flood maps (2021)${K.level ? ` for about 2100, with the sea ${fmtN(K.level, 1)} m higher than today (its ${RISENAME[K.level]})` : ', with today\'s sea'}, showing a storm tide with a 1-in-${K.rp} chance each year.${K.rp === 2 ? ' 1 in 2 years is not an ordinary tide: it is a high tide with a storm surge, likely to happen about every other year.' : ''}` : K.src === 'opw' ? (K.fut === 'now' ? 'OPW flood maps for the Garavogue (floodinfo.ie): the land with a 10%, 5% or 1% chance of river flooding in any one year. They model the river, not the sea.' : `OPW river flood maps for the ${FUTNAME[K.fut]} (${K.fut === 'm' ? 'about 20%' : 'about 30%'} more water in the river), at 1 in 10, 100 or 1,000 years.`) : K.src === 'sea' ? 'Sligo harbour is usually between about −1 and +2 m OD; the highest tides and surges have reached about 3 m.' : 'Lough Gill usually sits at about 3.8 m OD (lidar, 2011).';
+    const today = floodText();
     $('#wStats').innerHTML = on ? `
       <div class="k-stat hot"><b>${fmtN(s.count)}</b><span>buildings ${K.src === 'opw' || K.src === 'coast' ? 'in the flood zone' : 'reached'}</span></div>
       <div class="k-stat"><b>${fmtN(s.homes)}</b><span>homes in them</span></div>
@@ -344,7 +349,7 @@
 
   // ---------------------------------------------------------------- 02 ask the town
   function showResult(r, label) {
-    const s = summary(D, r), el = $('#result');
+    const s = summary(D, r), el = $('#result'); lastQ = { r, label };
     if (r.tgt === 'b') {
       const z = {}; r.ids.forEach(i => { const p = r.rows[i]; const k = D.SA[p.sa]?.ed_english || 'outside the census areas'; z[k] = (z[k] || 0) + 1; });
       const top = Object.entries(z).sort((a, b) => b[1] - a[1]).slice(0, 3);
@@ -411,7 +416,7 @@
       b.onclick = () => {
         touch(); const on = !K.layers[l.id];
         if (on && solo() && !BASE.has(l.id)) Object.keys(K.layers).forEach(k => { if (!BASE.has(k)) K.layers[k] = false; });
-        K.layers[l.id] = on; syncTiles(); showLayers(); sendState();
+        K.layers[l.id] = on; if (on) lastLayer = l.id; syncTiles(); showLayers(); sendState();
       };
       $('#layerTiles').append(b);
     });
@@ -508,22 +513,25 @@
 
   // ---------------------------------------------------------------- the projector
   function sendState() {
-    touched = true;
+    touched = true; screenSoon();
     P.send({ t: 'kiosk', s: { flood: K.flood ? { src: K.src, level: K.level, rp: K.rp, fut: K.fut } : null, sel: { tgt: litA.size ? 'a' : 'b', ids: litA.size ? [...litA] : [...litB] }, layers: K.layers, areaKey: K.areaKey, busFast: K.busFast, planY: K.planY, planOnly: K.planOnly } });
   }
   function onMsg(m) {
     if (m.t === 'hello' && m.who === 'out') { outs.add(m.i || 0); link(); sendState(); }
     if (m.t === 'bye' && m.who === 'out') { outs.delete(m.i || 0); link(); }
     if (m.t === 'want-kiosk') sendState();
+    if (m.t === 'hello' && m.who === 'screen') { const n = screens.size; screens.add(m.id); if (screens.size !== n) link(); screenSend(true); }
+    if (m.t === 'bye' && m.who === 'screen') { screens.delete(m.id); link(); }
   }
   function link() {
     const n = nProj(), have = [...outs].filter(i => i < n).length, el = $('#projLink');
     el.textContent = n === 1 ? (have ? 'Projector: connected' : 'Projector: not connected') : `Projectors: ${have} of 2 connected`; el.dataset.on = have === n ? '1' : '0';
-    $('#staffStatus').textContent = have === n ? (n === 1 ? 'The projector window is open and following the kiosk.' : 'Both projector windows are open and following the kiosk.')
+    const sc = $('#screenLink'); if (sc) { sc.textContent = screens.size ? 'Story screen: connected' : 'Story screen: not open'; sc.dataset.on = screens.size ? '1' : '0'; }
+    $('#staffStatus').textContent = (screens.size ? 'The story screen is open. ' : 'The story screen is not open. ') + (have === n ? (n === 1 ? 'The projector window is open and following the kiosk.' : 'Both projector windows are open and following the kiosk.')
       : n === 1 ? 'No projector window is open in this browser. Open it, drag it to the projector and press F.'
-      : `${have} of 2 projector windows are open. Open them, drag each to its projector and press F in each.`;
+      : `${have} of 2 projector windows are open. Open them, drag each to its projector and press F in each.`);
   }
-  P.send({ t: 'ping' });
+  P.send({ t: 'ping' }); P.send({ t: 'screen-ping' });
 
   // ---------------------------------------------------------------- staff exit and idle reset
   let holdT = 0, pin = '';
@@ -544,13 +552,14 @@
   const ttReset = () => { ttErr = ''; ttB = -1; if (map.getLayer('traffic')) map.removeLayer('traffic'); if (map.getSource('traffic')) map.removeSource('traffic'); showLayers(); };
   $('#ttTest').onclick = async () => { $('#ttState').textContent = 'Asking TomTom…'; const r = await TT.test(); $('#ttState').textContent = r.msg; if (r.ok) { ttReset(); P.send({ t: 'tt-key' }); } };
   $('#ttSave').onclick = () => { TT.setKey($('#ttKey').value); $('#ttKey').value = ''; ttErr = ''; ttB = -1; if (map.getSource('traffic')) { map.removeLayer('traffic'); map.removeSource('traffic'); } P.send({ t: 'tt-key' }); showLayers(); $('#ttState').textContent = TT.key() ? 'Key saved in this browser.' : 'Key removed.'; };
+  $('#openScreen').onclick = () => { if (!screens.size) window.open('screen.html', 'aiarg-screen', 'popup,left=120,top=120,width=1280,height=720'); };
   $('#goCal').onclick = () => window.open('project.html', 'aiarg-projection');
   $('#full').onclick = () => document.documentElement.requestFullscreen?.().catch(() => { });
   $('#resetNow').onclick = () => { $('#staffModal').hidden = true; reset(); };
   function touch() { lastTouch = Date.now(); }
   ['pointerdown', 'keydown', 'wheel'].forEach(t => addEventListener(t, touch, { passive: true }));
   function reset() {
-    K = DEF(); touched = false; $('#insp').hidden = true; $('#pinModal').hidden = true;
+    K = DEF(); lastLayer = null; lastQ = null; touched = false; $('#insp').hidden = true; $('#pinModal').hidden = true;
     document.querySelectorAll('.k-preset').forEach(b => b.setAttribute('aria-pressed', 'false'));
     $('#result').innerHTML = '<span class="k-dim">Pick a question. The answer lights up on the model.</span>';
     $('#areaKey').value = K.areaKey; syncTiles(); tab('water'); water(true); homeView();
@@ -588,7 +597,7 @@
   ].filter(Boolean);
   function storyShow() {
     const [h, t] = STEPS[story.i](); tab('water'); homeView();
-    $('#storyH').textContent = h; $('#storyT').textContent = t;
+    $('#storyH').textContent = h; $('#storyT').textContent = t; story.h = h; story.text = t; screenSoon();
     $('#storyDots').innerHTML = STEPS.map((_, j) => `<i${j === story.i ? ' class="on"' : ''}></i>`).join('');
     $('#story').classList.remove('fade'); void $('#story').offsetWidth; $('#story').classList.add('fade');
   }
@@ -598,10 +607,89 @@
   }
   function storyStop() {
     if (!story.on) return; story.on = false; clearInterval(story.t); $('#story').hidden = true; $('#k').classList.remove('story-on');
-    K = DEF(); syncTiles(); tab('water'); water(true); touched = true; touch();
+    K = DEF(); lastLayer = null; lastQ = null; syncTiles(); tab('water'); water(true); touched = true; touch();
   }
   $('#story').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); storyStop(); });
   $('#staffStory').onclick = () => { $('#staffModal').hidden = true; storyStart(); };
+
+  // ---------------------------------------------------------------- the story screen: a large monitor beside the model (screen.html)
+  // It shows in words, numbers and pictures what the model is showing. The kiosk works out everything; the screen only draws it.
+  const IMG = cfg.screenImages || {};
+  const nOn = () => LAYERS.filter(l => K.layers[l.id] && !BASE.has(l.id)).map(l => l.id);
+  const st = (v, l, hot) => [typeof v === 'number' ? fmtN(v) : v, l, !!hot];
+  const cap = t => t ? t[0].toUpperCase() + t.slice(1) : t;
+  const levelLabel = v => K.src === 'opw' ? OPWNAME[v] : K.src === 'coast' ? (v ? '+' + fmtN(v, 1) + ' m' : 'Today') : fmtN(v, 1) + ' m';
+  function floodChart() {
+    const lv = levels(); if (lv.length < 2) return null;
+    return { title: K.src === 'coast' ? `Buildings in the 1-in-${K.rp}-year sea flood zone as the sea rises` : K.src === 'opw' ? `Buildings in the river flood zone, ${FUTNAME[K.fut]}` : `Buildings the ${K.src === 'sea' ? 'sea' : 'lake'} reaches, by water level (m OD)`,
+      bars: lv.map(v => [levelLabel(v), waterReached(v).ids.length, v === K.level]) };
+  }
+  function floodInfo() {
+    const r = waterReached(), s = summary(D, r), f = FJ.features.find(x => isMine(x.properties)), z = K.src === 'opw' || K.src === 'coast';
+    const RP = { 2: 'A storm tide every other year', 20: 'A 1-in-20-year storm tide', 100: 'A once-a-century storm tide' };
+    const h = K.src === 'coast' ? RP[K.rp] + (K.level ? `, with the sea ${fmtN(K.level, 1)} m higher` : ', today')
+      : K.src === 'opw' ? `The river in flood: ${OPWNAME[K.level]}${K.fut === 'now' ? '' : ', ' + FUTNAME[K.fut]}` : `${K.src === 'sea' ? 'The sea' : 'Lough Gill'} at ${fmtN(K.level, 1)} m OD`;
+    return { h, water: K.src === 'opw' || K.src === 'coast' ? floodName() : null, text: floodText(), chart: floodChart(),
+      stats: [st(s.count, z ? 'buildings in the flood zone' : 'buildings the water reaches', 1), st(s.homes, 'homes in them'), st(s.commercial, 'commercial units'), f ? st(fmtN(f.properties.ha) + ' ha', z ? 'in the flood zone, inside the circle' : 'under water, inside the circle') : null].filter(Boolean) };
+  }
+  const ABOUT = {
+    areas: () => ({ h: 'Census areas', text: `Each patch is a census small area from Census 2022, usually about 80 to 120 homes, coloured by: ${$('#areaKey').selectedOptions[0]?.textContent || 'the indicator chosen'}. Comparing them with the water shows who lives where the water arrives.` }),
+    zoning: () => ({ h: 'Zoning', text: 'The development plan gives every piece of land a use: town centre, homes, open space, industry. Zoning decides where Sligo can grow, and so whether new building goes into the water\'s way or away from it.' }),
+    mon: () => ({ h: 'Recorded monuments', text: 'Sites in the Record of Monuments and Places, protected under the National Monuments Acts. The oldest parts of the town grew at the river crossing, which is also where the water comes first.' }),
+    scheme: () => ({ h: 'A new river crossing', text: 'The proposed Garavogue road and bridge, drawn from the council\'s 2018 design. A new crossing changes how people move through the town, and it is built where the river meets the tide.' }),
+    relief: () => ({ h: 'The shape of the land', text: 'Shaded relief from the lidar terrain. The town climbs away from the river on every side; the low land along the river, the quays and the bay is where the water goes first.' }),
+    grid: () => ({ h: 'How the model is made', text: `The model is ${fmtN(MJ.tiles.length)} 3D-printed tiles at 1:2500, a circle reaching one Irish mile (about 2 km) from Lady Erin. Buildings are printed at their measured height, or an estimate where none was measured.` }),
+    opw: () => ({ h: 'Where the river floods', text: 'The OPW\'s flood maps for the Garavogue (floodinfo.ie): the land with a 10%, 5% and 1% chance of flooding from the river in any one year. Indicative only; see floodinfo.ie for the official maps.' }),
+    buses: () => ({ h: 'The town buses', text: `Sligo's town routes ${BUS.routes.map(r => r.id).join(', ').replace(/, (?=[^,]*$)/, ' and ')}, each dot a bus where the timetable puts it. ${K.busFast ? 'A whole day runs in three minutes.' : 'They move in real time.'} Bus routes run along the quays and across the bridges, so a flood stops more than the streets it covers.` }),
+    traffic: () => ({ h: 'Traffic', text: live() && !K.busFast ? 'Live traffic from TomTom, updated every 5 minutes: green flows freely, red is slow. Most traffic crossing the town uses a few bridges and the quays, close to the water.' : 'Typical traffic on the main roads for this time of day: green flows freely, red is slow. Most traffic crossing the town uses a few bridges and the quays, close to the water.' }),
+    planning: () => { const g = PL.shown(K.planY, K.planOnly), by = {}; PL.shown(PL.last, false).forEach(a => { const y = Math.max(a.y, PL.first); by[y] = (by[y] || 0) + a.h; });
+      const ys = []; for (let y = PL.first; y <= PL.last; y++) ys.push([String(y), by[y] || 0, y === K.planY]);
+      return { h: K.planOnly ? `Planning permissions in ${K.planY}` : `Planning permissions, 2017 to ${K.planY}`, text: 'Planning permissions granted by Sligo County Council, coloured by what they are for. A permission is not a building started, but it shows where the town means to grow, and how much of that is near the water.',
+        stats: [st(g.length, 'permissions', 1), st(g.reduce((t, a) => t + a.h, 0), 'new homes permitted'), st(g.filter(a => a.fz).length, 'sites in today\'s flood zones')], chart: { title: 'New homes permitted each year', bars: ys } }; },
+    nature: () => ({ h: 'Protected nature', text: `The Garavogue joins two places protected by European law: ${[...new Set(NA.sites.filter(x => x.k === 'sac').map(x => x.name))].join(' and ')}. Sea and river rising change these habitats too: salt marsh and mudflats need room to move inland.`,
+      stats: [st(D.B.filter(b => b.properties.pz != null && b.properties.pz <= 50).length, 'buildings within 50 m of a protected site', 1), ...NA.sites.filter(x => x.k !== 'pnha').map(x => st(fmtN(x.hain) + ' ha', `${AW.NATURE[x.k][1]}: ${x.name}`))].slice(0, 4) }),
+    niah: () => { const c = r => NH.items.filter(o => o.rating === r).length;
+      return { h: 'Architectural heritage', text: 'Buildings in the National Inventory of Architectural Heritage, coloured by how important they are: national, regional or local. Much of Sligo\'s 18th- and 19th-century town stands along the river and the quays.',
+        stats: [st(NH.items.length, 'buildings in the inventory'), st(c('National'), 'of national importance'), st(NH.items.filter(o => o.fz).length, 'in today\'s 1-in-100-year flood zones', 1), st(NH.items.filter(o => o.fz1).length, 'with the sea 1 m higher', 1)] }; },
+    power: () => { const sub = PW.pts.filter(p => p.k === 'sub' || p.k === 'tx');
+      return { h: 'Electricity', text: 'Lines, substations and transformers from OpenStreetMap and Tailte Éireann mapping. A flooded substation cuts the power to streets well beyond the water, including to pumps, phones and lifts.',
+        stats: [st(sub.length, 'substations and transformers'), st(sub.filter(p => p.fz).length, 'in today\'s 1-in-100-year flood zone', 1), st(sub.filter(p => p.fz1).length, 'with the sea 1 m higher', 1)] }; },
+    cycle: () => ({ h: 'Cycle routes', text: 'Cycle tracks, shared paths and painted lanes from OpenStreetMap. Many of the best routes follow the river and the shore, the same flat land the water reaches first.',
+      stats: Object.entries(AW.CYCLE).filter(([k]) => CY.km[k]).map(([k, [, n]]) => st(fmtN(CY.km[k], 1) + ' km', n)).concat([st(CY.parking.length, 'bike parking places')]).slice(0, 4) })
+  };
+  Object.values(UT).forEach(u => { ABOUT[u.id] = () => ({ h: u.name, text: u.id === 'sewer' ? 'The pipes under the streets: wastewater runs downhill to the treatment plant, and some pipes empty into the river and the bay at outfalls. When the tide is high an outfall can be closed by the sea, so heavy rain and a high tide together flood streets far from the shore.'
+    : 'Drinking water reaches the town through mains from its sources and reservoirs on higher ground. Each colour is a supply zone, the area served from one source.' }); });
+  function screenInfo() {
+    const ids = nOn(), lay = ids.includes(lastLayer) ? lastLayer : ids[ids.length - 1];
+    let o, topic;
+    if (K.query && lastQ) {
+      const s = summary(D, lastQ.r), b = lastQ.r.tgt === 'b'; topic = 'ask';
+      o = { h: cap(lastQ.label), text: b ? 'The buildings that answer the question light up on the model in amber.' : 'The census areas that answer the question light up on the model in amber.',
+        stats: b ? [st(s.count, 'buildings', 1), st(s.homes, 'homes'), st(s.vacantHomes, 'vacant homes'), st(s.vacantCommercial, 'vacant commercial units')] : [st(s.count, 'census small areas', 1), st(s.population, 'people'), st(s.households, 'households')] };
+      if (K.flood) o.chart = floodChart();
+    } else if (lay && ABOUT[lay]) {
+      topic = lay; o = ABOUT[lay]();
+      if (K.flood) { const f = floodInfo(); o.water = f.water; if (!o.stats) o.stats = f.stats; if (!o.chart) o.chart = f.chart; }
+    } else if (K.flood) { topic = K.src; o = floodInfo(); }
+    else { topic = 'welcome'; o = { h: 'As Water Arrives', text: 'A model of Sligo at 1:2500, one Irish mile from Lady Erin. Use the screen beside it to raise the water, switch on the town\'s layers and ask it questions. What you choose is projected onto the model and explained here.' }; }
+    o.topic = topic; o.img = IMG[topic] || null; return o;
+  }
+  let scrT = 0, snapT = 0;
+  function screenSoon() { if (!screens.size) return; clearTimeout(scrT); scrT = setTimeout(() => screenSend(), 300); }
+  function screenSend(now) {
+    if (!screens.size || !ready) return;
+    const o = screenInfo();
+    if (story.on) { o.h = story.h || o.h; o.text = story.text || o.text; o.mode = 'story'; o.step = [story.i, STEPS.length]; } else o.mode = 'live';
+    o.legend = lastL.slice(0, 9).map(([c, t]) => [c, t]);
+    P.send({ t: 'screen', s: o });
+    clearTimeout(snapT); snapT = setTimeout(snap, now ? 50 : 1700);   // after the map has flown home
+  }
+  function snap() {                                         // a picture of the kiosk's map, for when there is no photograph for the topic
+    if (!screens.size) return;
+    map.once('idle', () => map.once('render', () => { try { const c = map.getCanvas(), w = 960, h = Math.round(w * c.height / c.width), o = document.createElement('canvas'); o.width = w; o.height = h;
+      o.getContext('2d').drawImage(c, 0, 0, w, h); P.send({ t: 'screen-map', src: o.toDataURL('image/jpeg', .82) }); } catch (e) { } }));
+    map.triggerRepaint();
+  }
 
   // ---------------------------------------------------------------- go
   ready = true;

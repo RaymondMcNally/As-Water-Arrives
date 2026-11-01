@@ -6,6 +6,7 @@ The website for the round 1:2500 model of Sligo made for the **16th A-IARG confe
 |---|---|
 | `index.html` | The model and the conference theme |
 | `kiosk.html` | The public touch screen. **01 Water arrives** raises the sea or Lough Gill; **02 Ask the town** has water questions first, then the Sligo God's Eye questions; **03 On the model** switches the projected layers; **04 About**. Everything chosen is sent to the projector. |
+| `screen.html` | The story screen for a large monitor beside the model. It follows the kiosk and explains what the model shows: headline, caption, key numbers, a chart and a picture (a photograph from `exhibition/screen/`, or the kiosk's map). |
 | `project.html` | Projector calibration and preview, for one or two projectors; `project.html?out` and `project.html?out=2` are the projector windows. With two, each covers half the model and the two are blended across the middle |
 | `model.html` | Make a model: drag a square and download a 3D-print tile (3MF, made in the browser with manifold-3d, the same method as the exhibition tiles), a laser contour kit (SVG/DXF sheets) or a contour map (PDF/SVG) |
 | `data.html` | Sources, method and files (including the OPW river flood maps for Sligo, 10%, 5% and 1% a year) |

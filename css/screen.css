@@ -1,0 +1,52 @@
+/* Story screen: a large monitor read from a few metres away. Sizes follow the window width (16:9). */
+:root {
+  --bg: #061116; --panel: #0b1d24; --line: #1d3b45; --ink: #eef5f4; --dim: #9db8ba; --faint: #4b6870;
+  --acc: #f0a54a; --water: #3fa9f5; --hot: #ffb000;
+  --f-head: "Fraunces", Georgia, serif; --f-body: "IBM Plex Sans", Arial, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); overflow: hidden; cursor: none }
+body { font: 400 1.6vw/1.4 var(--f-body) }
+.s { position: fixed; inset: 0; display: grid; grid-template-columns: 1.08fr 1fr; grid-template-rows: auto 1fr auto; gap: 2.2vw 3.4vw; padding: 2.4vw 3.4vw 1.8vw }
+.s-top { grid-column: 1 / -1; display: flex; align-items: center; gap: 2vw; font: 500 .95vw var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim) }
+.s-kicker { color: var(--acc) }
+.s-steps { display: flex; gap: .5vw }
+.s-steps i { width: 2.2vw; height: .35vw; border-radius: 1vw; background: var(--line) }
+.s-steps i.on { background: var(--acc) }
+.s-clock { margin-left: auto }
+
+.s-words { display: flex; flex-direction: column; min-height: 0 }
+.s-words h1 { font: 600 4.3vw/1.04 var(--f-head); letter-spacing: -.015em; margin: 0 0 1.4vw; text-wrap: balance }
+.s-water { font: 500 1.05vw var(--f-mono); letter-spacing: .06em; color: var(--water); margin: 0 0 1vw; text-transform: uppercase }
+.s-text { font-size: 1.85vw; line-height: 1.42; color: #d6e4e3; margin: 0; max-width: 40ch; text-wrap: pretty }
+.s-stats { margin-top: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.6vw 2.4vw; padding-top: 2vw }
+.s-stat b { display: block; font: 600 3.6vw/1 var(--f-head); font-variant-numeric: tabular-nums }
+.s-stat span { display: block; font-size: 1.05vw; color: var(--dim); margin-top: .4vw; max-width: 24ch }
+.s-stat.hot b { color: var(--hot) }
+
+.s-side { display: grid; grid-template-rows: 1fr auto; gap: 1.6vw; min-height: 0 }
+.s-pic { margin: 0; position: relative; min-height: 0; border-radius: .5vw; overflow: hidden; background: var(--panel); border: 1px solid var(--line) }
+.s-pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .9s }
+.s-pic img.on { opacity: 1 }
+.s-pic img.on.stale { opacity: .25 }
+.s-pic figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 2.4vw 1.2vw .9vw; font-size: .95vw; color: var(--dim); background: linear-gradient(transparent, rgba(4, 12, 15, .92)) }
+.s-pic figcaption:empty { display: none }
+.s-chart { background: var(--panel); border: 1px solid var(--line); border-radius: .5vw; padding: 1.1vw 1.3vw .8vw }
+.s-chart h2 { font: 500 .95vw var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); margin: 0 0 .8vw }
+.s-chart svg { display: block; width: 100%; height: auto; overflow: visible }
+.s-chart text { font-family: var(--f-body); fill: var(--dim) }
+.s-chart .v { fill: var(--ink); font-weight: 600 }
+.s-chart .cur text { fill: var(--hot) }
+
+.s-foot { grid-column: 1 / -1; display: flex; align-items: flex-end; gap: 2vw; border-top: 1px solid var(--line); padding-top: 1.1vw }
+.s-legend { display: flex; flex-wrap: wrap; gap: .5vw 1.8vw; font-size: 1vw; color: var(--dim); flex: 1; max-height: 3.4vw; overflow: hidden }
+.s-legend div { display: flex; align-items: center; gap: .5vw }
+.s-legend i { width: 1vw; height: 1vw; border-radius: .2vw; flex: none }
+.s-org { font: 500 .85vw var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--faint); white-space: nowrap }
+
+.s-words, .s-stats, .s-chart { transition: opacity .45s }
+.s.swap .s-words, .s.swap .s-chart { opacity: 0 }
+.s-help { position: fixed; right: 1vw; bottom: .4vw; margin: 0; font: 12px var(--f-mono); color: var(--faint) }
+:fullscreen .s-help, .s-help.gone { display: none }
