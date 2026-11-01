@@ -5,14 +5,14 @@
   'use strict';
   const NETS = {
     sewer: { file: 'data/sewer.json', col: '#d29b5c', dot: '#ffe2b8', name: 'Sewers', sub: '2008 network, flowing to the outfalls' },
-    watermains: { file: 'data/watermains.json', col: '#38d6f5', dot: '#d8f8ff', name: 'Water mains', sub: 'Public water supply pipes' }
+    watermains: { file: 'data/watermains.json', col: '#38d6f5', dot: '#d8f8ff', name: 'Water mains', sub: 'Public supply pipes, 2007' }
   };
   AW.utilities = async function () {
     const out = {};
     await Promise.all(Object.entries(NETS).map(async ([k, n]) => {
       const J = await AW.getJSON(n.file).catch(() => null); if (!J) return;
       const lines = J.pipes.map(p => { const c = p.c, xy = []; for (let i = 0; i < c.length; i += 2) xy.push([c[i], c[i + 1]]); const d = [0]; for (let i = 1; i < xy.length; i++) d.push(d[i - 1] + Math.hypot(xy[i][0] - xy[i - 1][0], xy[i][1] - xy[i - 1][1])); return { xy, d, f: p.f, len: d[d.length - 1] }; });
-      out[k] = Object.assign({ id: k, J, lines, points: { outfall: J.outfall || [], weir: J.weir || [] } }, n);
+      out[k] = Object.assign({ id: k, J, lines, points: { outfall: J.outfall || [], weir: J.weir || [] }, plants: J.plants || [] }, n);
     }));
     return out;
   };
